@@ -77,6 +77,8 @@ $baseDir = './';
                     <button type="button" class="dropdown-item" onclick="duplicateSelected()"><i class="fas fa-clone"></i> Duplicar <span class="shortcut">Ctrl+D</span></button>
                     <button type="button" class="dropdown-item" onclick="deleteSelected()"><i class="fas fa-trash"></i> Excluir <span class="shortcut">Delete</span></button>
                     <button type="button" class="dropdown-item" onclick="selectAll()"><i class="fas fa-object-group"></i> Selecionar Tudo <span class="shortcut">Ctrl+A</span></button>
+                    <div class="dropdown-separator"></div>
+                    <button type="button" class="dropdown-item" onclick="openFountainFillDialog()"><i class="fas fa-fill text-purple-600"></i> Preenchimento Gradiente... <span class="shortcut">F11</span></button>
                 </div>
             </div>
 
@@ -309,6 +311,7 @@ $baseDir = './';
                     <button type="button" class="t-btn" onclick="applyPowerClip()" title="PowerClip: Colocar no Recipiente"><i class="fas fa-sign-in-alt text-amber-600"></i></button>
                     <button type="button" class="t-btn" id="btnExtractPowerClip" onclick="extractPowerClip()" style="display:none;" title="PowerClip: Extrair Conteúdo"><i class="fas fa-sign-out-alt text-amber-600"></i></button>
                     <button type="button" class="t-btn" onclick="openContourDialog()" title="Contorno / Borda de Adesivo e Corte (Contour)"><i class="fas fa-bullseye text-pink-600"></i></button>
+                    <button type="button" class="t-btn" onclick="openFountainFillDialog()" title="Preenchimento Gradiente / Degradê (F11)"><i class="fas fa-fill text-purple-600"></i></button>
                 </div>
                 <div class="tool-sep"></div>
                 <!-- PowerTRACE Action Button for Selected Bitmaps -->
@@ -699,6 +702,97 @@ $baseDir = './';
             <button type="button" class="btn-secondary" onclick="closeContourDialog()">Cancelar</button>
             <button type="button" class="btn-primary" onclick="applyContourFromModal()" style="background:#db2777; border-color:#be185d; padding:7px 16px;">
                 <i class="fas fa-bullseye"></i> Aplicar Contorno
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== Fountain Fill (Gradiente / Degradê) Modal ==================== -->
+<div id="fountainFillModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" style="width: 500px; max-width:95vw;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fas fa-fill text-purple-600"></i> Preenchimento Gradiente (Fountain Fill — F11)</div>
+            <button type="button" class="btn-win-ctl" onclick="closeFountainFillDialog()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <!-- Barra de Pré-Visualização Dinâmica do Gradiente -->
+            <div style="margin-bottom:12px;">
+                <label style="font-size:11px; font-weight:600; color:#555; display:block; margin-bottom:4px;">Pré-visualização:</label>
+                <div id="fountainPreviewBar" style="height:36px; border-radius:4px; border:1px solid #ccc; box-shadow:inset 0 1px 3px rgba(0,0,0,0.15); background:linear-gradient(90deg, #ffd700, #b8860b);"></div>
+            </div>
+
+            <!-- Tipo de Gradiente e Ângulo -->
+            <div style="background:#f9f9f9; border:1px solid #e0e0e0; border-radius:4px; padding:10px; margin-bottom:12px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Tipo de Gradiente:</label>
+                    <div style="display:flex; gap:12px;">
+                        <label style="font-size:11.5px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                            <input type="radio" name="fountainType" value="linear" checked onchange="updateFountainPreview()"> Linear
+                        </label>
+                        <label style="font-size:11.5px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                            <input type="radio" name="fountainType" value="radial" onchange="updateFountainPreview()"> Radial (Circular)
+                        </label>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Ângulo:</label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="range" id="fountainAngleSlider" min="0" max="360" value="90" style="width:130px;" oninput="document.getElementById('fountainAngleInput').value = this.value; updateFountainPreview();">
+                        <input type="number" id="fountainAngleInput" value="90" min="0" max="360" style="width:55px;" class="prop-input" oninput="document.getElementById('fountainAngleSlider').value = this.value; updateFountainPreview();">
+                        <span style="font-size:11px; color:#666;">°</span>
+                    </div>
+                </div>
+
+                <!-- Cores Inicial e Final -->
+                <div style="display:flex; justify-content:space-between; align-items:center; padding-top:4px; border-top:1px dashed #ddd;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <label style="font-size:11px; font-weight:600; color:#333;">De (Inicial):</label>
+                        <input type="color" id="fountainColor1" value="#ffd700" style="width:32px; height:24px; border:1px solid #ccc; border-radius:3px; cursor:pointer;" onchange="updateFountainPreview()">
+                    </div>
+                    <button type="button" class="btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="swapFountainColors()" title="Inverter Cores"><i class="fas fa-exchange-alt"></i></button>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <label style="font-size:11px; font-weight:600; color:#333;">Para (Final):</label>
+                        <input type="color" id="fountainColor2" value="#b8860b" style="width:32px; height:24px; border:1px solid #ccc; border-radius:3px; cursor:pointer;" onchange="updateFountainPreview()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Presets Clássicos Corel -->
+            <div>
+                <label style="font-size:11px; font-weight:600; color:#555; display:block; margin-bottom:6px;">Estilos Clássicos do CorelDRAW:</label>
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px;">
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:4px; display:flex; align-items:center; gap:4px;" onclick="applyFountainPreset('#ffd700', '#b8860b', 90)">
+                        <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background:linear-gradient(135deg, #ffd700, #b8860b);"></span> Ouro Real
+                    </button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:4px; display:flex; align-items:center; gap:4px;" onclick="applyFountainPreset('#ffffff', '#808080', 90)">
+                        <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background:linear-gradient(135deg, #ffffff, #808080);"></span> Prata
+                    </button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:4px; display:flex; align-items:center; gap:4px;" onclick="applyFountainPreset('#ff512f', '#dd2476', 45)">
+                        <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background:linear-gradient(135deg, #ff512f, #dd2476);"></span> Pôr do Sol
+                    </button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:4px; display:flex; align-items:center; gap:4px;" onclick="applyFountainPreset('#00c6ff', '#0072ff', 90)">
+                        <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background:linear-gradient(135deg, #00c6ff, #0072ff);"></span> Azul Royal
+                    </button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:4px; display:flex; align-items:center; gap:4px;" onclick="applyFountainPreset('#11998e', '#38ef7d', 90)">
+                        <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background:linear-gradient(135deg, #11998e, #38ef7d);"></span> Esmeralda
+                    </button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:4px; display:flex; align-items:center; gap:4px;" onclick="applyFountainPreset('#f857a6', '#ff5858', 45)">
+                        <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background:linear-gradient(135deg, #f857a6, #ff5858);"></span> Rubro
+                    </button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:4px; display:flex; align-items:center; gap:4px;" onclick="applyFountainPreset('#ff8c00', '#e52d27', 90)">
+                        <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background:linear-gradient(135deg, #ff8c00, #e52d27);"></span> Fogo
+                    </button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:4px; display:flex; align-items:center; gap:4px;" onclick="applyFountainPreset('#434343', '#000000', 90)">
+                        <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background:linear-gradient(135deg, #434343, #000000);"></span> Carbono
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeFountainFillDialog()">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="applyFountainFillFromModal()" style="background:#7c3aed; border-color:#6d28d9; padding:7px 16px;">
+                <i class="fas fa-fill"></i> Aplicar Gradiente
             </button>
         </div>
     </div>

@@ -2829,6 +2829,128 @@ function applyContourFromModal() {
     toast(`⚡ Contorno de ${offsetMm}mm aplicado com sucesso!`, 'ok');
 }
 
+// ==================== CorelDRAW Fountain Fill™ (Gradiente / Degradê F11) ====================
+function openFountainFillDialog() {
+    const modal = document.getElementById('fountainFillModal');
+    if (!modal) return;
+    updateFountainPreview();
+    modal.style.display = 'flex';
+}
+
+function closeFountainFillDialog() {
+    const modal = document.getElementById('fountainFillModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function updateFountainPreview() {
+    const bar = document.getElementById('fountainPreviewBar');
+    if (!bar) return;
+    const type = document.querySelector('input[name="fountainType"]:checked')?.value || 'linear';
+    const c1 = document.getElementById('fountainColor1')?.value || '#ffd700';
+    const c2 = document.getElementById('fountainColor2')?.value || '#b8860b';
+    const angle = parseInt(document.getElementById('fountainAngleInput')?.value || '90', 10);
+
+    if (type === 'radial') {
+        bar.style.background = `radial-gradient(circle, ${c1}, ${c2})`;
+    } else {
+        bar.style.background = `linear-gradient(${angle}deg, ${c1}, ${c2})`;
+    }
+}
+
+function swapFountainColors() {
+    const c1El = document.getElementById('fountainColor1');
+    const c2El = document.getElementById('fountainColor2');
+    if (!c1El || !c2El) return;
+    const temp = c1El.value;
+    c1El.value = c2El.value;
+    c2El.value = temp;
+    updateFountainPreview();
+}
+
+function applyFountainPreset(c1, c2, angle = 90) {
+    const c1El = document.getElementById('fountainColor1');
+    const c2El = document.getElementById('fountainColor2');
+    const angleSlider = document.getElementById('fountainAngleSlider');
+    const angleInput = document.getElementById('fountainAngleInput');
+    if (c1El) c1El.value = c1;
+    if (c2El) c2El.value = c2;
+    if (angleSlider) angleSlider.value = angle;
+    if (angleInput) angleInput.value = angle;
+    const linearRadio = document.querySelector('input[name="fountainType"][value="linear"]');
+    if (linearRadio) linearRadio.checked = true;
+    updateFountainPreview();
+}
+
+function applyFountainFillFromModal() {
+    const type = document.querySelector('input[name="fountainType"]:checked')?.value || 'linear';
+    const c1 = document.getElementById('fountainColor1')?.value || '#ffd700';
+    const c2 = document.getElementById('fountainColor2')?.value || '#b8860b';
+    const angle = parseInt(document.getElementById('fountainAngleInput')?.value || '90', 10);
+
+    const mainSvg = document.getElementById('mainSvgCanvas');
+    let defs = mainSvg.querySelector('defs');
+    if (!defs) {
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        mainSvg.prepend(defs);
+    }
+
+    const gradId = `fountain_${Date.now()}`;
+    let gradEl;
+
+    if (type === 'radial') {
+        gradEl = document.createElementNS('http://www.w3.org/2000/svg', 'radialGradient');
+        gradEl.setAttribute('id', gradId);
+        gradEl.setAttribute('cx', '50%');
+        gradEl.setAttribute('cy', '50%');
+        gradEl.setAttribute('r', '50%');
+    } else {
+        gradEl = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        gradEl.setAttribute('id', gradId);
+        // Calcula vetor direcional do ângulo em coordenadas SVG %
+        const rad = (angle - 90) * (Math.PI / 180);
+        const x1 = Math.round(50 - Math.cos(rad) * 50);
+        const y1 = Math.round(50 - Math.sin(rad) * 50);
+        const x2 = Math.round(50 + Math.cos(rad) * 50);
+        const y2 = Math.round(50 + Math.sin(rad) * 50);
+        gradEl.setAttribute('x1', `${x1}%`);
+        gradEl.setAttribute('y1', `${y1}%`);
+        gradEl.setAttribute('x2', `${x2}%`);
+        gradEl.setAttribute('y2', `${y2}%`);
+    }
+
+    const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    stop1.setAttribute('offset', '0%');
+    stop1.setAttribute('stop-color', c1);
+
+    const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    stop2.setAttribute('offset', '100%');
+    stop2.setAttribute('stop-color', c2);
+
+    gradEl.appendChild(stop1);
+    gradEl.appendChild(stop2);
+    defs.appendChild(gradEl);
+
+    // Se houver objetos selecionados, aplica neles
+    if (state.selectedElements.length > 0) {
+        state.selectedElements.forEach(el => {
+            if (el.tagName.toLowerCase() === 'g') {
+                el.querySelectorAll('*').forEach(child => child.setAttribute('fill', `url(#${gradId})`));
+            } else {
+                el.setAttribute('fill', `url(#${gradId})`);
+            }
+        });
+        saveState('Preenchimento Gradiente (F11)');
+        updateLayersTree();
+        toast('⚡ Preenchimento Gradiente aplicado com sucesso!', 'ok');
+    } else {
+        state.activeFill = `url(#${gradId})`;
+        toast('Gradiente definido como preenchimento ativo!', 'ok');
+    }
+
+    closeFountainFillDialog();
+}
+
+
 
 // ==================== Keyboard Shortcuts ====================
 function initKeyboardShortcuts() {
@@ -2949,6 +3071,9 @@ function initKeyboardShortcuts() {
         } else if (e.key === 'F4') {
             e.preventDefault();
             zoomFitPage();
+        } else if (e.key === 'F11') {
+            e.preventDefault();
+            openFountainFillDialog();
         } else if (e.key === ' ') {
             e.preventDefault();
             selectTool('select');
