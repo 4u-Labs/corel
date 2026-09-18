@@ -1,0 +1,541 @@
+<?php
+// Garantir redirecionamento com barra final caso seja acessado sem ela (ex: /app/corel2 -> /app/corel2/)
+$reqUri = $_SERVER['REQUEST_URI'] ?? '';
+$path = parse_url($reqUri, PHP_URL_PATH);
+if (!str_ends_with($path, '/') && !str_ends_with($path, '.php')) {
+    $queryString = !empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '';
+    header("Location: " . $path . '/' . $queryString, true, 301);
+    exit;
+}
+$v = time();
+$baseDir = './';
+?>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>CorelClone Pro 2026 (64-Bit) — [Documento 1] @ 100%</title>
+    <base href="<?php echo htmlspecialchars($baseDir); ?>">
+
+    <!-- Styles & Fonts -->
+    <link rel="stylesheet" href="style.css?v=<?php echo $v; ?>">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- JSZip for CDR unzipping & PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Vectorization & Geometry Engines -->
+    <script src="libs/imagetracer.js"></script>
+    <script src="libs/paper-full.min.js"></script>
+</head>
+<body>
+
+<div class="corel-app">
+
+    <!-- ==================== 1. Top Area (4 Levels) ==================== -->
+    <header class="top-header-area">
+        <!-- Level 1: App Title & Main Menu Bar -->
+        <div class="window-title-bar">
+            <div class="window-title-left">
+                <span class="corel-app-icon"><img src="corelicon.png" alt="CorelClone"></span>
+                <span class="window-title-text" id="windowTitleText">CorelClone Pro 2026 (64-Bit) — [Documento 1] @ 100%</span>
+            </div>
+            <div class="window-title-controls">
+                <button type="button" class="btn-win-ctl" title="Minimizar"><i class="fas fa-minus"></i></button>
+                <button type="button" class="btn-win-ctl" title="Maximizar"><i class="far fa-square"></i></button>
+                <button type="button" class="btn-win-ctl close" title="Fechar"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+
+        <!-- Main Menu Bar -->
+        <nav class="menu-bar">
+            <!-- Arquivo -->
+            <div class="menu-item">
+                <button type="button" class="menu-btn">Arquivo</button>
+                <div class="dropdown-menu">
+                    <button type="button" class="dropdown-item" onclick="newDocument()"><i class="fas fa-file"></i> Novo <span class="shortcut">Ctrl+N</span></button>
+                    <button type="button" class="dropdown-item" onclick="document.getElementById('importFileInput').click()"><i class="fas fa-folder-open text-emerald-600"></i> Abrir .CDR / .PDF / SVG... <span class="shortcut">Ctrl+O</span></button>
+                    <button type="button" class="dropdown-item" onclick="saveProjectJSON()"><i class="fas fa-save"></i> Salvar Projeto <span class="shortcut">Ctrl+S</span></button>
+                    <div class="dropdown-separator"></div>
+                    <button type="button" class="dropdown-item" onclick="exportDocument('svg')"><i class="fas fa-file-code"></i> Exportar como SVG...</button>
+                    <button type="button" class="dropdown-item" onclick="exportDocument('pdf')"><i class="fas fa-file-pdf"></i> Exportar como PDF...</button>
+                    <button type="button" class="dropdown-item" onclick="exportDocument('png')"><i class="fas fa-file-image"></i> Exportar como PNG HD...</button>
+                    <div class="dropdown-separator"></div>
+                    <a href="http://127.0.0.1:54321/" target="_blank" class="dropdown-item"><i class="fas fa-desktop text-cyan-600"></i> Abrir no App Local (100% CDR)</a>
+                </div>
+            </div>
+
+            <!-- Editar -->
+            <div class="menu-item">
+                <button type="button" class="menu-btn">Editar</button>
+                <div class="dropdown-menu">
+                    <button type="button" class="dropdown-item" onclick="undo()"><i class="fas fa-undo"></i> Desfazer <span class="shortcut">Ctrl+Z</span></button>
+                    <button type="button" class="dropdown-item" onclick="redo()"><i class="fas fa-redo"></i> Refazer <span class="shortcut">Ctrl+Y</span></button>
+                    <div class="dropdown-separator"></div>
+                    <button type="button" class="dropdown-item" onclick="duplicateSelected()"><i class="fas fa-clone"></i> Duplicar <span class="shortcut">Ctrl+D</span></button>
+                    <button type="button" class="dropdown-item" onclick="deleteSelected()"><i class="fas fa-trash"></i> Excluir <span class="shortcut">Delete</span></button>
+                    <button type="button" class="dropdown-item" onclick="selectAll()"><i class="fas fa-object-group"></i> Selecionar Tudo <span class="shortcut">Ctrl+A</span></button>
+                </div>
+            </div>
+
+            <!-- Exibir -->
+            <div class="menu-item">
+                <button type="button" class="menu-btn">Exibir</button>
+                <div class="dropdown-menu">
+                    <button type="button" class="dropdown-item" onclick="setZoom(1.0)"><i class="fas fa-search"></i> Tamanho Real (100%)</button>
+                    <button type="button" class="dropdown-item" onclick="zoomFitPage()"><i class="fas fa-expand"></i> Ajustar à Página <span class="shortcut">F4</span></button>
+                    <div class="dropdown-separator"></div>
+                    <button type="button" class="dropdown-item" onclick="toggleRulers()"><i class="fas fa-ruler"></i> Mostrar Réguas</button>
+                    <button type="button" class="dropdown-item" onclick="toggleGuidelines()"><i class="fas fa-border-all"></i> Mostrar Linhas-Guia</button>
+                </div>
+            </div>
+
+            <!-- Objeto -->
+            <div class="menu-item">
+                <button type="button" class="menu-btn">Objeto</button>
+                <div class="dropdown-menu">
+                    <button type="button" class="dropdown-item" onclick="groupSelected()"><i class="fas fa-object-group"></i> Agrupar <span class="shortcut">Ctrl+G</span></button>
+                    <button type="button" class="dropdown-item" onclick="ungroupSelected()"><i class="fas fa-object-ungroup"></i> Desagrupar <span class="shortcut">Ctrl+U</span></button>
+                    <div class="dropdown-separator"></div>
+                    <button type="button" class="dropdown-item" onclick="convertSelectedToCurves()"><i class="fas fa-bezier-curve"></i> Converter em Curvas <span class="shortcut">Ctrl+Q</span></button>
+                    <button type="button" class="dropdown-item" onclick="centerSelectedInPage()"><i class="fas fa-crosshairs"></i> Centralizar na Página <span class="shortcut">P</span></button>
+                    <div class="dropdown-separator"></div>
+                    <button type="button" class="dropdown-item" onclick="orderSelected('front')"><i class="fas fa-angle-double-up"></i> Trazer para Frente <span class="shortcut">Shift+PgUp</span></button>
+                    <button type="button" class="dropdown-item" onclick="orderSelected('back')"><i class="fas fa-angle-double-down"></i> Enviar para Trás <span class="shortcut">Shift+PgDn</span></button>
+                </div>
+            </div>
+
+            <!-- Efeitos / Modelagem -->
+            <div class="menu-item">
+                <button type="button" class="menu-btn">Modelar</button>
+                <div class="dropdown-menu">
+                    <button type="button" class="dropdown-item" onclick="booleanOperation('weld')"><i class="fas fa-layer-group"></i> Soldar (Weld)</button>
+                    <button type="button" class="dropdown-item" onclick="booleanOperation('trim')"><i class="fas fa-cut"></i> Aparar (Trim)</button>
+                    <button type="button" class="dropdown-item" onclick="booleanOperation('intersect')"><i class="fas fa-circle-notch"></i> Interseção (Intersect)</button>
+                </div>
+            </div>
+
+            <!-- Bitmap -->
+            <div class="menu-item">
+                <button type="button" class="menu-btn">Bitmap</button>
+                <div class="dropdown-menu">
+                    <button type="button" class="dropdown-item" onclick="openPowerTraceDialog()"><i class="fas fa-bolt text-amber-500"></i> Rastreamento PowerTRACE™...</button>
+                    <button type="button" class="dropdown-item" onclick="toggleImportedBgImage()"><i class="fas fa-eye-slash"></i> Ocultar Fundo / Template</button>
+                </div>
+            </div>
+
+            <!-- Ajuda -->
+            <div class="menu-item">
+                <button type="button" class="menu-btn">Ajuda</button>
+                <div class="dropdown-menu">
+                    <button type="button" class="dropdown-item" onclick="showShortcutsModal()"><i class="fas fa-keyboard"></i> Atalhos de Teclado</button>
+                    <a href="suporte.php" target="_blank" class="dropdown-item"><i class="fas fa-question-circle"></i> Suporte CorelClone</a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Level 2: Standard Toolbar -->
+        <div class="standard-toolbar">
+            <div class="toolbar-group">
+                <button type="button" class="t-btn" onclick="newDocument()" title="Novo (Ctrl+N)"><i class="fas fa-file"></i></button>
+                <button type="button" class="t-btn" onclick="document.getElementById('importFileInput').click()" title="Abrir .CDR / .PDF / SVG (Ctrl+O)"><i class="fas fa-folder-open text-amber-600"></i></button>
+                <button type="button" class="t-btn" onclick="saveProjectJSON()" title="Salvar Projeto (Ctrl+S)"><i class="fas fa-save text-blue-600"></i></button>
+                <button type="button" class="t-btn" onclick="window.print()" title="Imprimir (Ctrl+P)"><i class="fas fa-print"></i></button>
+            </div>
+
+            <div class="tool-sep"></div>
+
+            <div class="toolbar-group">
+                <button type="button" class="t-btn" onclick="cutSelected()" title="Recortar (Ctrl+X)"><i class="fas fa-cut"></i></button>
+                <button type="button" class="t-btn" onclick="copySelected()" title="Copiar (Ctrl+C)"><i class="fas fa-copy"></i></button>
+                <button type="button" class="t-btn" onclick="pasteSelected()" title="Colar (Ctrl+V)"><i class="fas fa-paste"></i></button>
+            </div>
+
+            <div class="tool-sep"></div>
+
+            <div class="toolbar-group">
+                <button type="button" class="t-btn" onclick="undo()" title="Desfazer (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+                <button type="button" class="t-btn" onclick="redo()" title="Refazer (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+            </div>
+
+            <div class="tool-sep"></div>
+
+            <!-- Import / Export Actions -->
+            <div class="toolbar-group">
+                <button type="button" class="t-btn-labeled" onclick="exportDocument('svg')" title="Exportar vetor SVG limpo">
+                    <i class="fas fa-file-code text-orange-600"></i> SVG
+                </button>
+                <button type="button" class="t-btn-labeled" onclick="exportDocument('pdf')" title="Exportar PDF para impressão">
+                    <i class="fas fa-file-pdf text-red-600"></i> PDF
+                </button>
+                <button type="button" class="t-btn-labeled" onclick="exportDocument('png')" title="Exportar imagem PNG HD">
+                    <i class="fas fa-file-image text-emerald-600"></i> PNG
+                </button>
+            </div>
+
+            <div class="tool-sep"></div>
+
+            <!-- Zoom Box -->
+            <div class="zoom-dropdown-box">
+                <label for="zoomSelect" style="margin-right:4px; font-size:11px; color:#555;"><i class="fas fa-search"></i></label>
+                <select id="zoomSelect" class="corel-select" onchange="changeZoomPreset(this.value)">
+                    <option value="fit">Para Ajustar (F4)</option>
+                    <option value="width">Largura</option>
+                    <option value="0.25">25%</option>
+                    <option value="0.5">50%</option>
+                    <option value="0.75">75%</option>
+                    <option value="1.0" selected>100%</option>
+                    <option value="1.5">150%</option>
+                    <option value="2.0">200%</option>
+                    <option value="4.0">400%</option>
+                </select>
+            </div>
+
+            <div class="tool-sep"></div>
+
+            <!-- Align & Power Actions -->
+            <div class="toolbar-group">
+                <button type="button" class="t-btn" onclick="alignSelected('center')" title="Centralizar na Página (P)"><i class="fas fa-crosshairs"></i></button>
+                <button type="button" class="t-btn" id="btnToggleDuplicateBg" onclick="toggleImportedBgImage()" style="display:none;" title="Ocultar Imagem de Fundo Duplicada do Modelo"><i class="fas fa-eye-slash text-amber-600"></i></button>
+                <button type="button" class="t-btn" id="btnQuickPowerTrace" onclick="openPowerTraceDialog()" title="PowerTRACE™ — Vetorizar Bitmap"><i class="fas fa-bolt text-amber-500"></i></button>
+            </div>
+
+            <!-- Hidden File Input for .CDR, .PDF, .SVG, Images -->
+            <input type="file" id="importFileInput" accept=".cdr,.pdf,.svg,.png,.jpg,.jpeg,.webp,.json" style="display:none;">
+        </div>
+
+        <!-- Level 3: Dynamic Property Bar (Barra de Propriedades Corel) -->
+        <div class="property-bar" id="corelPropertyBar">
+            <!-- Default Document Properties -->
+            <div id="propGroupDocument" class="toolbar-group">
+                <div class="prop-field">
+                    <label for="docPresetSelect">Formato:</label>
+                    <select id="docPresetSelect" class="corel-select" onchange="changeDocPreset(this.value)">
+                        <option value="A4-Landscape">A4 Deitado (297 x 210 mm)</option>
+                        <option value="A4-Portrait">A4 Em Pé (210 x 297 mm)</option>
+                        <option value="Cartao-Visita">Cartão de Visita (90 x 50 mm)</option>
+                        <option value="Instagram-Post">Post Instagram (1080 x 1080 px)</option>
+                        <option value="Instagram-Story">Story / Reels (1080 x 1920 px)</option>
+                        <option value="Banner-Web">Banner Full HD (1920 x 1080 px)</option>
+                        <option value="Custom">Personalizado</option>
+                    </select>
+                </div>
+                <div class="tool-sep"></div>
+                <div class="prop-field">
+                    <label>L:</label>
+                    <input type="number" id="docPropWidth" class="prop-input" value="1122" onchange="updateDocDimensionsFromInput()">
+                </div>
+                <div class="prop-field">
+                    <label>A:</label>
+                    <input type="number" id="docPropHeight" class="prop-input" value="793" onchange="updateDocDimensionsFromInput()">
+                </div>
+                <div class="toolbar-group" style="margin-left:4px;">
+                    <button type="button" class="t-btn active" id="btnOrientLandscape" onclick="setDocOrientation('landscape')" title="Paisagem"><i class="fas fa-file-alt fa-rotate-90"></i></button>
+                    <button type="button" class="t-btn" id="btnOrientPortrait" onclick="setDocOrientation('portrait')" title="Retrato"><i class="fas fa-file-alt"></i></button>
+                </div>
+                <div class="tool-sep"></div>
+                <div class="prop-field">
+                    <label>Unidades:</label>
+                    <select id="unitSelect" class="corel-select" onchange="changeUnits(this.value)">
+                        <option value="mm" selected>Milímetros (mm)</option>
+                        <option value="px">Pixels (px)</option>
+                        <option value="in">Polegadas (in)</option>
+                        <option value="pt">Pontos (pt)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Object Selection Properties -->
+            <div id="propGroupObject" class="toolbar-group" style="display:none;">
+                <div class="prop-field">
+                    <label>X:</label>
+                    <input type="number" id="objPropX" class="prop-input" value="0" onchange="updateSelectedTransformFromProp()">
+                </div>
+                <div class="prop-field">
+                    <label>Y:</label>
+                    <input type="number" id="objPropY" class="prop-input" value="0" onchange="updateSelectedTransformFromProp()">
+                </div>
+                <div class="tool-sep"></div>
+                <div class="prop-field">
+                    <label>L:</label>
+                    <input type="number" id="objPropW" class="prop-input" value="100" onchange="updateSelectedTransformFromProp()">
+                </div>
+                <div class="prop-field">
+                    <label>A:</label>
+                    <input type="number" id="objPropH" class="prop-input" value="100" onchange="updateSelectedTransformFromProp()">
+                </div>
+                <div class="tool-sep"></div>
+                <div class="prop-field">
+                    <label><i class="fas fa-redo-alt"></i></label>
+                    <input type="number" id="objPropRotate" class="prop-input" style="width:50px;" value="0" onchange="updateSelectedTransformFromProp()">
+                    <span style="font-size:10px; color:#666;">°</span>
+                </div>
+                <div class="tool-sep"></div>
+                <!-- Boolean Modeling -->
+                <div class="toolbar-group" id="booleanButtonsGroup">
+                    <button type="button" class="t-btn" onclick="booleanOperation('weld')" title="Soldar (Weld)"><i class="fas fa-layer-group text-blue-600"></i></button>
+                    <button type="button" class="t-btn" onclick="booleanOperation('trim')" title="Aparar (Trim)"><i class="fas fa-cut text-purple-600"></i></button>
+                    <button type="button" class="t-btn" onclick="booleanOperation('intersect')" title="Interseção (Intersect)"><i class="fas fa-circle-notch text-emerald-600"></i></button>
+                </div>
+            </div>
+
+            <!-- Node Tool (F10) Properties -->
+            <div id="propGroupNodeTool" class="toolbar-group" style="display:none;">
+                <button type="button" class="t-btn" onclick="addNodeToSelectedPath()" title="Adicionar Nó (+)"><i class="fas fa-plus"></i></button>
+                <button type="button" class="t-btn" onclick="deleteSelectedNode()" title="Excluir Nó (-)"><i class="fas fa-minus"></i></button>
+                <div class="tool-sep"></div>
+                <button type="button" class="t-btn" onclick="convertNodeToCurve()" title="Converter em Curva"><i class="fas fa-bezier-curve"></i></button>
+                <button type="button" class="t-btn" onclick="convertNodeToLine()" title="Converter em Linha"><i class="fas fa-slash"></i></button>
+            </div>
+        </div>
+
+        <!-- Level 4: Document Tabs Bar (Abas Superiores Corel) -->
+        <div class="document-tabs-bar" id="corelTabsBar">
+            <div class="doc-tab" onclick="switchDocumentTab('welcome')">
+                <i class="fas fa-home"></i> <span>Tela Inicial</span>
+            </div>
+            <div class="doc-tab active" id="tabDoc1" onclick="switchDocumentTab('page0')">
+                <i class="fas fa-vector-square text-cyan-600"></i> <span>Documento 1</span>
+                <span class="tab-close" onclick="closeDocTab(event, 0)">✕</span>
+            </div>
+            <button type="button" class="btn-new-tab" onclick="addNewPageTab()" title="Nova Página / Aba (+)"><i class="fas fa-plus"></i></button>
+        </div>
+    </header>
+
+    <!-- ==================== 2. Main Workspace Layout Grid ==================== -->
+    <div class="main-workspace-grid">
+
+        <!-- Left Vertical Toolbox (Caixa de Ferramentas Corel) -->
+        <aside class="corel-toolbox">
+            <!-- 1. Pick Tool -->
+            <button type="button" class="tool-btn active" id="toolBtn_select" onclick="selectTool('select')" title="Ferramenta Seleção (Espaço)">
+                <i class="fas fa-mouse-pointer"></i>
+            </button>
+            <!-- 2. Shape Tool (F10) -->
+            <button type="button" class="tool-btn" id="toolBtn_node" onclick="selectTool('node')" title="Ferramenta Forma / Nós (F10)">
+                <i class="fas fa-bezier-curve"></i>
+            </button>
+            <!-- 3. Crop / Knife -->
+            <button type="button" class="tool-btn" id="toolBtn_crop" onclick="selectTool('crop')" title="Cortar / Faca (C)">
+                <i class="fas fa-crop-alt"></i>
+            </button>
+            <!-- 4. Zoom / Pan -->
+            <button type="button" class="tool-btn" id="toolBtn_zoom" onclick="selectTool('pan')" title="Pan / Mover Tela (H)">
+                <i class="fas fa-hand-paper"></i>
+            </button>
+            <!-- 5. Freehand / Pen -->
+            <button type="button" class="tool-btn" id="toolBtn_pen" onclick="selectTool('pen')" title="Caneta Bézier / Mão Livre">
+                <i class="fas fa-pen-nib"></i>
+            </button>
+            <!-- 6. Artistic Media / Brush -->
+            <button type="button" class="tool-btn" id="toolBtn_brush" onclick="selectTool('brush')" title="Mídia Artística / Pincel">
+                <i class="fas fa-paint-brush"></i>
+            </button>
+            <!-- 7. Rectangle (F6) -->
+            <button type="button" class="tool-btn" id="toolBtn_rect" onclick="selectTool('rect')" title="Retângulo (F6)">
+                <i class="far fa-square"></i>
+            </button>
+            <!-- 8. Ellipse (F7) -->
+            <button type="button" class="tool-btn" id="toolBtn_ellipse" onclick="selectTool('ellipse')" title="Elipse (F7)">
+                <i class="far fa-circle"></i>
+            </button>
+            <!-- 9. Star / Polygon (Y) -->
+            <button type="button" class="tool-btn" id="toolBtn_star" onclick="selectTool('star')" title="Polígono / Estrela (Y)">
+                <i class="far fa-star"></i>
+            </button>
+            <!-- 10. Text (F8) -->
+            <button type="button" class="tool-btn" id="toolBtn_text" onclick="selectTool('text')" title="Texto (F8)">
+                <i class="fas fa-font"></i>
+            </button>
+            <!-- 11. Eyedropper -->
+            <button type="button" class="tool-btn" id="toolBtn_eyedropper" onclick="selectTool('eyedropper')" title="Conta-gotas de Cor">
+                <i class="fas fa-eye-dropper"></i>
+            </button>
+            <!-- 12. Fill Tool -->
+            <button type="button" class="tool-btn" id="toolBtn_fill" onclick="selectTool('fill')" title="Preenchimento Interativo (G)">
+                <i class="fas fa-fill-drip"></i>
+            </button>
+
+            <!-- Toolbox Color Swatches (Base da Barra de Ferramentas Corel) -->
+            <div class="toolbox-color-well" title="Cores Ativas: Clique para alterar preenchimento ou contorno">
+                <div class="color-swatch-stroke" id="activeStrokeSwatch" onclick="openStrokeColorPicker()"></div>
+                <div class="color-swatch-fill" id="activeFillSwatch" onclick="openFillColorPicker()"></div>
+            </div>
+        </aside>
+
+        <!-- Central Viewport with Calibrated Rulers & Board -->
+        <main class="viewport-wrapper" id="viewportWrapper">
+            <!-- Top-Left Corner Box between Rulers -->
+            <div class="ruler-corner" onclick="resetRulerZero()" title="Ponto Zero (0,0)"></div>
+
+            <!-- Horizontal Ruler -->
+            <canvas id="rulerH" class="ruler-horizontal"></canvas>
+
+            <!-- Vertical Ruler -->
+            <canvas id="rulerV" class="ruler-vertical"></canvas>
+
+            <!-- Canvas Workspace Scroller -->
+            <div class="canvas-scroller" id="canvasScroller">
+                <div class="canvas-board" id="canvasBoard">
+                    <svg id="mainSvgCanvas" xmlns="http://www.w3.org/2000/svg" width="1122" height="793" viewBox="0 0 1122 793">
+                        <defs>
+                            <!-- Grid Background Pattern -->
+                            <pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+                            </pattern>
+                        </defs>
+
+                        <!-- White Page Sheet -->
+                        <rect id="bgSheet" width="100%" height="100%" fill="#ffffff"/>
+
+                        <!-- Interactive Magnetic Guidelines (Linhas-Guia) -->
+                        <g id="guidelinesGroup"></g>
+
+                        <!-- Main Vectors Layer Group -->
+                        <g id="layerGroupMain"></g>
+
+                        <!-- Interactive Bounding Box / Selection Overlay -->
+                        <g id="selectionOverlay" pointer-events="all"></g>
+
+                        <!-- Interactive Bezier Node Editing Overlay (Shape Tool F10) -->
+                        <g id="nodeEditOverlay" pointer-events="all"></g>
+                    </svg>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Side Docker: Objects (Camadas e Objetos) -->
+        <aside class="docker-container" id="objectsDocker">
+            <div class="docker-header">
+                <div class="docker-title"><i class="fas fa-layer-group text-blue-600"></i> Objetos / Camadas</div>
+                <div class="docker-controls">
+                    <button type="button" class="btn-win-ctl" onclick="toggleDockerCollapse()" title="Recolher / Expandir"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+
+            <div class="docker-body">
+                <!-- Search bar -->
+                <div class="objects-search-bar">
+                    <input type="text" id="objectsSearchInput" class="objects-search-input" placeholder="Pesquisar objetos..." oninput="filterObjectsTree(this.value)">
+                </div>
+
+                <!-- Blending Mode & Opacity -->
+                <div class="objects-blend-row">
+                    <select id="blendModeSelect" class="corel-select" style="width:110px;" onchange="changeSelectedBlendMode(this.value)">
+                        <option value="normal">Normal</option>
+                        <option value="multiply">Multiplicar</option>
+                        <option value="screen">Tela</option>
+                        <option value="overlay">Sobrepor</option>
+                        <option value="darken">Escurecer</option>
+                        <option value="lighten">Clarear</option>
+                    </select>
+
+                    <div class="opacity-slider-box">
+                        <input type="range" id="layerOpacitySlider" min="0" max="100" value="100" oninput="changeSelectedOpacity(this.value)">
+                        <span id="layerOpacityVal" style="font-size:10.5px; width:32px; text-align:right;">100%</span>
+                    </div>
+                </div>
+
+                <!-- Layers Tree List -->
+                <div class="objects-tree" id="objectsTreeList">
+                    <!-- Dynamic Layer Items Injected by JS -->
+                </div>
+
+                <!-- Docker Bottom Actions Bar -->
+                <div class="docker-bottom-bar">
+                    <button type="button" class="t-btn" onclick="addNewLayer()" title="Nova Camada"><i class="fas fa-plus-square text-blue-600"></i></button>
+                    <button type="button" class="t-btn" onclick="duplicateSelected()" title="Duplicar Objeto"><i class="fas fa-clone text-amber-600"></i></button>
+                    <button type="button" class="t-btn" onclick="deleteSelected()" title="Excluir (Delete)"><i class="fas fa-trash text-red-600"></i></button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Collapsible Vertical Tabs on Far Right (Hints, Objects, etc.) -->
+        <div class="docker-vertical-tabs">
+            <button type="button" class="v-tab-btn" onclick="switchRightTab('hints')">Dicas</button>
+            <button type="button" class="v-tab-btn active" onclick="switchRightTab('objects')">Objetos</button>
+            <button type="button" class="v-tab-btn" onclick="switchRightTab('media')">Mídia</button>
+        </div>
+
+        <!-- Far Right: Official Vertical Corel Color Palette (Clique Esq: Fill | Clique Dir: Stroke) -->
+        <aside class="corel-vertical-palette" id="corelVerticalPalette">
+            <button type="button" class="palette-arrow-btn" onclick="scrollPalette(-1)" title="Rolar Paleta Acima"><i class="fas fa-chevron-up"></i></button>
+            <div class="vertical-swatches-scroll" id="verticalPaletteSwatches">
+                <!-- Swatches injected by JS -->
+            </div>
+            <button type="button" class="palette-arrow-btn" onclick="scrollPalette(1)" title="Rolar Paleta Abaixo"><i class="fas fa-chevron-down"></i></button>
+        </aside>
+    </div>
+
+    <!-- ==================== 3. Bottom Status Bar ==================== -->
+    <footer class="corel-status-bar">
+        <div class="status-left">
+            <div class="status-item" id="statusDimensions">
+                <i class="fas fa-ruler-combined"></i> <span>297.0 x 210.0 mm</span>
+            </div>
+            <div class="status-item" id="statusCoordinates">
+                <i class="fas fa-mouse-pointer"></i> <span>X: 0.0 mm &nbsp; Y: 0.0 mm</span>
+            </div>
+            <div class="status-item" id="statusContextHint" style="color:#2563eb; font-weight:500;">
+                Segure CTRL para restringir proporção, ALT para transformar pelo centro.
+            </div>
+        </div>
+
+        <div class="status-right">
+            <!-- Document Colors Used -->
+            <div class="status-doc-palette">
+                <span class="doc-palette-title">Cores do Documento:</span>
+                <div id="docRecentColors" style="display:flex; gap:2px;"></div>
+            </div>
+            <span style="opacity:0.6;">CorelClone Pro 2026 (4uLabs)</span>
+        </div>
+    </footer>
+</div>
+
+<!-- ==================== PowerTRACE™ Modal Dialog ==================== -->
+<div id="powertraceModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fas fa-bolt text-amber-500"></i> PowerTRACE™ — Vetorizador de Bitmap</div>
+            <button type="button" class="btn-win-ctl" onclick="closePowerTraceDialog()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:11.5px; color:#444; margin-bottom:12px;">Converta a imagem selecionada ou visualização do arquivo CorelDRAW (.CDR) em curvas vetoriais nativas SVG totalmente editáveis.</p>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <label style="display:flex; gap:8px; align-items:flex-start; padding:8px; border:1px solid #ddd; border-radius:3px; background:#fafafa; cursor:pointer;">
+                    <input type="radio" name="tracePreset" value="posterized2" checked style="margin-top:3px;">
+                    <div>
+                        <strong style="display:block; font-size:11.5px; color:#222;">Logotipo / Clipart (Recomendado)</strong>
+                        <span style="font-size:10.5px; color:#666;">Vetoriza preservando cores primárias e contornos suaves, perfeito para logos e artes Corel.</span>
+                    </div>
+                </label>
+                <label style="display:flex; gap:8px; align-items:flex-start; padding:8px; border:1px solid #ddd; border-radius:3px; background:#fafafa; cursor:pointer;">
+                    <input type="radio" name="tracePreset" value="detailed" style="margin-top:3px;">
+                    <div>
+                        <strong style="display:block; font-size:11.5px; color:#222;">Alta Fidelidade (Mais Cores)</strong>
+                        <span style="font-size:10.5px; color:#666;">Gera mais camadas de cores para ilustrações e fotos mais ricas.</span>
+                    </div>
+                </label>
+            </div>
+            <div style="margin-top:12px;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:#333; cursor:pointer;">
+                    <input type="checkbox" id="traceRemoveOriginal" checked> Remover imagem bitmap original após vetorização
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closePowerTraceDialog()">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="runPowerTrace()"><i class="fas fa-magic"></i> Rastrear e Gerar Vetores</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notifications Container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- Scripts -->
+<script src="script.js?v=<?php echo $v; ?>"></script>
+</body>
+</html>
