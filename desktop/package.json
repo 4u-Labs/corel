@@ -28,7 +28,8 @@
       {
         "provider": "github",
         "owner": "4u-Labs",
-        "repo": "corel2"
+        "repo": "corel2",
+        "releaseType": "release"
       }
     ],
     "directories": {
