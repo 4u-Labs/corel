@@ -1090,81 +1090,95 @@ $baseDir = './';
 
 <!-- ==================== Download Desktop App Modal ==================== -->
 <div id="downloadDesktopModal" class="modal-overlay" style="display:none;">
-    <div class="modal-card" style="width: 640px; max-width:95vw;">
+    <div class="modal-card" style="width: 660px; max-width:95vw;">
         <div class="modal-header">
-            <div class="modal-title"><i class="fas fa-desktop text-emerald-600"></i> Baixar CorelClone Pro para Computador</div>
+            <div class="modal-title"><i class="fas fa-desktop text-emerald-600"></i> Escolha como deseja usar o CorelClone</div>
             <button type="button" class="btn-win-ctl" onclick="closeDownloadDesktopModal()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body" style="padding:16px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap;">
-                <p style="font-size:12px; color:#444; margin:0; flex:1;">
-                    Tenha o poder do CorelClone instalado no seu computador com <strong>100% de nós Bézier e curvas vetoriais nativas</strong> para arquivos .CDR.
-                </p>
-                <span id="detectedOsBadge" style="font-size:10.5px; font-weight:700; background:#dcfce7; color:#15803d; border:1px solid #86efac; border-radius:20px; padding:3px 10px; white-space:nowrap; display:flex; align-items:center; gap:5px;">
-                    <i class="fas fa-check-circle"></i> Detectando SO...
-                </span>
+
+            <!-- Seção 1: App de Computador (Máxima Fidelidade CDR) -->
+            <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:14px; margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:10px; flex-wrap:wrap;">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="background:#0284c7; color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:3px; text-transform:uppercase;">Recomendado para Gráfica</span>
+                            <h3 style="font-size:13px; font-weight:700; color:#0f172a; margin:0;">Aplicativo para Computador (Desktop)</h3>
+                        </div>
+                        <p style="font-size:11.5px; color:#475569; margin:4px 0 0 0;">
+                            Possui o <strong>motor nativo do CorelDRAW</strong>: abre arquivos <code>.CDR</code> com <strong>100% de nós Bézier, curvas vetoriais e camadas originais</strong> (sem precisar vetorizar).
+                        </p>
+                    </div>
+                    <span id="detectedOsBadge" style="font-size:10px; font-weight:700; background:#dcfce7; color:#15803d; border:1px solid #86efac; border-radius:20px; padding:2px 8px; white-space:nowrap;">
+                        <i class="fas fa-check-circle"></i> Detectando SO...
+                    </span>
+                </div>
+
+                <!-- Cards Grid -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px;">
+                    <!-- Card Windows -->
+                    <div id="cardWin" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:10px; text-align:center; display:flex; flex-direction:column; justify-content:space-between;">
+                        <div>
+                            <i class="fab fa-windows text-sky-500" style="font-size:24px; margin-bottom:4px;"></i>
+                            <div style="font-size:12px; font-weight:700; color:#1e293b;">Windows</div>
+                            <span style="font-size:10px; color:#64748b; display:block; margin-bottom:8px;">Windows 10 / 11 (64-Bit)</span>
+                        </div>
+                        <a href="https://github.com/4u-Labs/corel2/releases/latest/download/CorelClone-Setup.exe" target="_blank" class="btn btn-primary" style="background:#0284c7; border-color:#0369a1; text-decoration:none; font-size:11px; padding:5px 8px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; gap:5px; color:#fff; font-weight:600;">
+                            <i class="fas fa-download"></i> Baixar .EXE
+                        </a>
+                    </div>
+
+                    <!-- Card macOS -->
+                    <div id="cardMac" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:10px; text-align:center; display:flex; flex-direction:column; justify-content:space-between;">
+                        <div>
+                            <i class="fab fa-apple text-slate-800" style="font-size:24px; margin-bottom:4px;"></i>
+                            <div style="font-size:12px; font-weight:700; color:#1e293b;">macOS</div>
+                            <span style="font-size:10px; color:#64748b; display:block; margin-bottom:8px;">Apple M1/M2/M3 & Intel</span>
+                        </div>
+                        <a href="https://github.com/4u-Labs/corel2/releases/latest/download/CorelClone.dmg" target="_blank" class="btn btn-primary" style="background:#334155; border-color:#1e293b; text-decoration:none; font-size:11px; padding:5px 8px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; gap:5px; color:#fff; font-weight:600;">
+                            <i class="fas fa-download"></i> Baixar .DMG
+                        </a>
+                    </div>
+
+                    <!-- Card Linux -->
+                    <div id="cardLinux" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:10px; text-align:center; display:flex; flex-direction:column; justify-content:space-between;">
+                        <div>
+                            <i class="fab fa-linux text-amber-500" style="font-size:24px; margin-bottom:4px;"></i>
+                            <div style="font-size:12px; font-weight:700; color:#1e293b;">Linux</div>
+                            <span style="font-size:10px; color:#64748b; display:block; margin-bottom:8px;">Ubuntu, Zorin, Mint, Debian</span>
+                        </div>
+                        <a href="https://github.com/4u-Labs/corel2/releases/latest/download/CorelClone.AppImage" target="_blank" class="btn btn-primary" style="background:#d97706; border-color:#b45309; text-decoration:none; font-size:11px; padding:5px 8px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; gap:5px; color:#fff; font-weight:600;">
+                            <i class="fas fa-download"></i> Baixar .AppImage
+                        </a>
+                    </div>
+                </div>
+
+                <div style="margin-top:10px; font-size:10.5px; color:#64748b; display:flex; gap:12px; flex-wrap:wrap;">
+                    <span>✓ Abre .CDR direto em curvas</span>
+                    <span>✓ Funciona 100% Offline</span>
+                    <span>✓ Sem limites de arquivo</span>
+                </div>
             </div>
 
-            <!-- Download Cards Grid -->
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom:16px;">
-                <!-- Card Windows -->
-                <div id="cardWin" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:14px; text-align:center; display:flex; flex-direction:column; justify-content:space-between; transition:all 0.2s;">
-                    <div>
-                        <i class="fab fa-windows text-sky-500" style="font-size:32px; margin-bottom:8px;"></i>
-                        <h4 style="font-size:13px; font-weight:700; color:#1e293b; margin:0 0 4px 0;">Windows</h4>
-                        <span style="font-size:10.5px; color:#64748b; display:block; margin-bottom:10px;">Windows 10 / 11 (64-Bit)</span>
+            <!-- Seção 2: WebApp / PWA (Versão Rápida sem Instalador) -->
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div style="flex:1; min-width:260px;">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
+                        <i class="fas fa-globe text-emerald-600"></i>
+                        <strong style="font-size:12px; color:#166534;">Ou instale como WebApp (PWA) direto no navegador</strong>
                     </div>
-                    <a href="https://github.com/4u-Labs/corel2/releases/latest/download/CorelClone-Setup.exe" target="_blank" class="btn btn-primary" style="background:#0284c7; border-color:#0369a1; text-decoration:none; font-size:11px; padding:7px 10px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; gap:6px; color:#fff; font-weight:600;">
-                        <i class="fas fa-download"></i> Baixar .EXE
-                    </a>
-                </div>
-
-                <!-- Card macOS -->
-                <div id="cardMac" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:14px; text-align:center; display:flex; flex-direction:column; justify-content:space-between; transition:all 0.2s;">
-                    <div>
-                        <i class="fab fa-apple text-slate-800" style="font-size:32px; margin-bottom:8px;"></i>
-                        <h4 style="font-size:13px; font-weight:700; color:#1e293b; margin:0 0 4px 0;">macOS</h4>
-                        <span style="font-size:10.5px; color:#64748b; display:block; margin-bottom:10px;">Apple Silicon & Intel (.DMG)</span>
+                    <div style="font-size:11px; color:#15803d; line-height:1.4;">
+                        Instalação instantânea com 1 clique (sem baixar arquivos .exe). Cria artes, degradês, QR Code e <strong>vetoriza imagens PNG/JPG com o PowerTRACE™</strong>.
                     </div>
-                    <a href="https://github.com/4u-Labs/corel2/releases/latest/download/CorelClone.dmg" target="_blank" class="btn btn-primary" style="background:#334155; border-color:#1e293b; text-decoration:none; font-size:11px; padding:7px 10px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; gap:6px; color:#fff; font-weight:600;">
-                        <i class="fas fa-download"></i> Baixar .DMG
-                    </a>
-                </div>
-
-                <!-- Card Linux -->
-                <div id="cardLinux" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:14px; text-align:center; display:flex; flex-direction:column; justify-content:space-between; transition:all 0.2s;">
-                    <div>
-                        <i class="fab fa-linux text-amber-500" style="font-size:32px; margin-bottom:8px;"></i>
-                        <h4 style="font-size:13px; font-weight:700; color:#1e293b; margin:0 0 4px 0;">Linux</h4>
-                        <span style="font-size:10.5px; color:#64748b; display:block; margin-bottom:10px;">Ubuntu, Zorin, Mint, Debian</span>
-                    </div>
-                    <a href="https://github.com/4u-Labs/corel2/releases/latest/download/CorelClone.AppImage" target="_blank" class="btn btn-primary" style="background:#d97706; border-color:#b45309; text-decoration:none; font-size:11px; padding:7px 10px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; gap:6px; color:#fff; font-weight:600;">
-                        <i class="fas fa-download"></i> Baixar .AppImage
-                    </a>
-                </div>
-            </div>
-
-            <!-- PWA Alternative Banner -->
-            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <i class="fas fa-globe text-emerald-600" style="font-size:24px;"></i>
-                    <div>
-                        <div style="font-size:12px; font-weight:700; color:#166534;">Prefere usar sem baixar instalador?</div>
-                        <div style="font-size:11px; color:#15803d;">Instale como WebApp (PWA) direto pelo navegador com 1 clique.</div>
+                    <div style="font-size:10.5px; color:#991b1b; margin-top:5px; background:#fee2e2; border:1px solid #fecaca; border-radius:4px; padding:4px 8px; display:inline-block; line-height:1.35;">
+                        ⚠️ <strong>Diferença do WebApp:</strong> Por limitações de segurança do navegador, o WebApp não lê arquivos <code>.CDR</code> em curvas nativas da gráfica (abre como imagem para rastreamento). Para abrir <strong>.CDR com 100% de nós e curvas originais</strong>, baixe o <strong>App de Computador</strong> acima.
                     </div>
                 </div>
-                <button type="button" class="btn btn-primary" onclick="installPWA()" style="background:#059669; border-color:#047857; font-size:11px; padding:6px 14px; font-weight:600; cursor:pointer;">
+                <button type="button" class="btn btn-primary" onclick="installPWA()" style="background:#059669; border-color:#047857; font-size:11.5px; padding:8px 14px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     <i class="fas fa-plus-circle"></i> Instalar WebApp
                 </button>
             </div>
 
-            <!-- Features List -->
-            <div style="margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:11px; color:#475569;">
-                <div><i class="fas fa-check text-emerald-600"></i> 100% Curvas Bézier nativas em .CDR</div>
-                <div><i class="fas fa-check text-emerald-600"></i> Funciona 100% Offline sem internet</div>
-                <div><i class="fas fa-check text-emerald-600"></i> Sem limite de tamanho de arquivos</div>
-                <div><i class="fas fa-check text-emerald-600"></i> Totalmente privado (no seu disco local)</div>
-            </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn-secondary" onclick="closeDownloadDesktopModal()">Fechar</button>
