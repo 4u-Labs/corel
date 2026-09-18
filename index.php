@@ -65,8 +65,7 @@ $baseDir = './';
                     <button type="button" class="dropdown-item" onclick="exportDocument('png')"><i class="fas fa-file-image"></i> Exportar como PNG HD...</button>
                     <div class="dropdown-separator"></div>
                     <button type="button" class="dropdown-item" onclick="openPrintExportDialog()"><i class="fas fa-print text-red-600"></i> Preparar para Impressão / Gráfica... <span class="shortcut">Ctrl+P</span></button>
-                    <div class="dropdown-separator"></div>
-                    <a href="http://127.0.0.1:54321/" target="_blank" class="dropdown-item"><i class="fas fa-desktop text-cyan-600"></i> Abrir no App Local (100% CDR)</a>
+                    <button type="button" class="dropdown-item" onclick="openLocalBridgeApp()"><i class="fas fa-desktop text-cyan-600"></i> Abrir no App Local (100% CDR)...</button>
                 </div>
             </div>
 
@@ -1030,6 +1029,45 @@ $baseDir = './';
                     <i class="fas fa-print"></i> Imprimir / PDF Vetorial
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== Local Bridge Modal ==================== -->
+<div id="localBridgeModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" style="width: 500px; max-width:95vw;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fas fa-desktop text-cyan-600"></i> CorelClone App Local (100% Vetorial)</div>
+            <button type="button" class="btn-win-ctl" onclick="closeLocalBridgeModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px; padding:12px; margin-bottom:12px; display:flex; gap:10px; align-items:flex-start;">
+                <i class="fas fa-info-circle text-sky-600" style="font-size:18px; margin-top:2px;"></i>
+                <div style="font-size:12px; color:#0369a1; line-height:1.45;">
+                    <strong>Para que serve o App Local?</strong><br>
+                    Permite abrir arquivos proprietários <strong>.CDR do CorelDRAW</strong> com 100% de nós Bézier, curvas vetoriais nativas e camadas reais, usando o conversor do seu próprio computador.
+                </div>
+            </div>
+
+            <p style="font-size:11.5px; color:#444; margin-bottom:10px;">
+                O servidor local (porta 54321) não foi detectado em execução no momento nesta máquina.
+            </p>
+
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:10px; margin-bottom:12px;">
+                <div style="font-size:11px; font-weight:700; color:#334155; margin-bottom:4px;">Como iniciar no seu computador:</div>
+                <div style="font-size:11px; color:#64748b; margin-bottom:6px;">No terminal (Linux / Mac / Windows), execute:</div>
+                <code style="display:block; background:#1e293b; color:#38bdf8; padding:7px 10px; border-radius:4px; font-size:11px; font-family:monospace;">python3 corel_bridge.py</code>
+            </div>
+
+            <div style="font-size:11px; color:#666;">
+                💡 <em>Dica: Você pode continuar usando o CorelClone normalmente aqui na Web. Para imagens, cliparts e logos, o <strong>PowerTRACE™</strong> vetoriza direto no navegador sem precisar do App Local!</em>
+            </div>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+            <button type="button" class="btn-secondary" onclick="closeLocalBridgeModal()">Continuar na Web</button>
+            <button type="button" class="btn-primary" onclick="openLocalBridgeApp()" style="background:#0284c7; border-color:#0369a1; padding:7px 16px;">
+                <i class="fas fa-sync-alt"></i> Tentar Conectar
+            </button>
         </div>
     </div>
 </div>

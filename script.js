@@ -1744,6 +1744,41 @@ function closeDocTab(e, idx) {
     switchDocumentTab(nextIdx);
 }
 
+// ==================== Local Bridge App Launcher & Checker ====================
+async function openLocalBridgeApp() {
+    toast('Verificando conexão com o App Local...', 'info');
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1200);
+        const res = await fetch('http://127.0.0.1:54321/status', {
+            signal: controller.signal,
+            mode: 'cors'
+        });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+            closeLocalBridgeModal();
+            window.open('http://127.0.0.1:54321/', '_blank');
+            toast('Conectado ao App Local com aceleração vetorial nativa!', 'ok');
+            return;
+        }
+    } catch (e) {
+        // Falha na conexão ou servidor offline
+    }
+
+    openLocalBridgeGuideModal();
+}
+
+function openLocalBridgeGuideModal() {
+    const modal = document.getElementById('localBridgeModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeLocalBridgeModal() {
+    const modal = document.getElementById('localBridgeModal');
+    if (modal) modal.style.display = 'none';
+}
+
 // ==================== Import File Engine (.CDR, .PDF, .SVG) ====================
 document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('importFileInput');
@@ -1837,7 +1872,7 @@ async function handleImportFile(file) {
                 "• Ou clique em [Cancelar] para abrir apenas a pré-visualização de imagem nesta aba e usar o PowerTRACE."
             );
             if (openLocal) {
-                window.open('http://127.0.0.1:54321/', '_blank');
+                openLocalBridgeApp();
                 return;
             }
         }
