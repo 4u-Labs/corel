@@ -134,6 +134,7 @@ $baseDir = './';
                     <button type="button" class="dropdown-item" onclick="booleanOperation('intersect')"><i class="fas fa-circle-notch"></i> Interseção (Intersect)</button>
                     <div class="dropdown-separator"></div>
                     <button type="button" class="dropdown-item" onclick="openContourDialog()"><i class="fas fa-bullseye text-pink-600"></i> Contorno / Borda de Adesivo...</button>
+                    <button type="button" class="dropdown-item" onclick="openDropShadowDialog()"><i class="fas fa-cloud-moon text-indigo-600"></i> Sombra Projetada (Drop Shadow)...</button>
                 </div>
             </div>
 
@@ -316,6 +317,7 @@ $baseDir = './';
                     <button type="button" class="t-btn" id="btnExtractPowerClip" onclick="extractPowerClip()" style="display:none;" title="PowerClip: Extrair Conteúdo"><i class="fas fa-sign-out-alt text-amber-600"></i></button>
                     <button type="button" class="t-btn" onclick="openContourDialog()" title="Contorno / Borda de Adesivo e Corte (Contour)"><i class="fas fa-bullseye text-pink-600"></i></button>
                     <button type="button" class="t-btn" onclick="openFountainFillDialog()" title="Preenchimento Gradiente / Degradê (F11)"><i class="fas fa-fill text-purple-600"></i></button>
+                    <button type="button" class="t-btn" onclick="openDropShadowDialog()" title="Sombra Projetada (Drop Shadow)"><i class="fas fa-cloud-moon text-indigo-600"></i></button>
                 </div>
                 <div class="tool-sep"></div>
                 <!-- PowerTRACE Action Button for Selected Bitmaps -->
@@ -859,6 +861,77 @@ $baseDir = './';
             <button type="button" class="btn-secondary" onclick="closeQrCodeDialog()">Cancelar</button>
             <button type="button" class="btn-primary" onclick="generateAndInsertQrCode()" style="background:#059669; border-color:#047857; padding:7px 16px;">
                 <i class="fas fa-qrcode"></i> Inserir na Prancheta
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== Drop Shadow Modal ==================== -->
+<div id="dropShadowModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" style="width: 480px; max-width:95vw;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fas fa-cloud-moon text-indigo-600"></i> Sombra Projetada (Drop Shadow)</div>
+            <button type="button" class="btn-win-ctl" onclick="closeDropShadowDialog()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:11.5px; color:#444; margin-bottom:12px;">Aplique uma sombra suave, perspectiva ou efeito de brilho nos objetos ou textos selecionados.</p>
+
+            <div style="background:#f9f9f9; border:1px solid #e0e0e0; border-radius:4px; padding:10px; margin-bottom:12px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Deslocamento Horizontal (X):</label>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <input type="range" id="shadowDxSlider" min="-40" max="40" value="6" style="width:110px;" oninput="document.getElementById('shadowDxVal').textContent = this.value">
+                        <span id="shadowDxVal" style="font-size:11px; font-weight:700; width:26px; text-align:right;">6</span>px
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Deslocamento Vertical (Y):</label>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <input type="range" id="shadowDySlider" min="-40" max="40" value="6" style="width:110px;" oninput="document.getElementById('shadowDyVal').textContent = this.value">
+                        <span id="shadowDyVal" style="font-size:11px; font-weight:700; width:26px; text-align:right;">6</span>px
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Desfoque / Nevoamento (Blur):</label>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <input type="range" id="shadowBlurSlider" min="0" max="30" value="8" style="width:110px;" oninput="document.getElementById('shadowBlurVal').textContent = this.value">
+                        <span id="shadowBlurVal" style="font-size:11px; font-weight:700; width:26px; text-align:right;">8</span>px
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Opacidade da Sombra:</label>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <input type="range" id="shadowOpacitySlider" min="10" max="100" value="50" style="width:110px;" oninput="document.getElementById('shadowOpacityVal').textContent = this.value">
+                        <span id="shadowOpacityVal" style="font-size:11px; font-weight:700; width:26px; text-align:right;">50</span>%
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Cor da Sombra:</label>
+                    <input type="color" id="shadowColorInput" value="#000000" style="width:36px; height:24px; border:1px solid #ccc; border-radius:3px; cursor:pointer;">
+                </div>
+            </div>
+
+            <!-- Presets Rápidos -->
+            <div>
+                <label style="font-size:11px; font-weight:600; color:#555; display:block; margin-bottom:6px;">Estilos Prontos:</label>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:3px 8px;" onclick="applyShadowPresetValues(6, 6, 8, 50, '#000000')">Padrão Corel</button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:3px 8px;" onclick="applyShadowPresetValues(0, 8, 16, 40, '#000000')">Suave / Flutuante</button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:3px 8px;" onclick="applyShadowPresetValues(3, 3, 2, 75, '#000000')">Dura / Vinil</button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:3px 8px;" onclick="applyShadowPresetValues(0, 0, 12, 80, '#00e5ff')">Brilho Ciano (Glow)</button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:3px 8px;" onclick="applyShadowPresetValues(0, 0, 12, 80, '#ffd700')">Brilho Dourado</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="removeDropShadowFromSelected()" style="color:#dc2626; margin-right:auto;"><i class="fas fa-trash"></i> Remover Sombra</button>
+            <button type="button" class="btn-secondary" onclick="closeDropShadowDialog()">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="applyDropShadowFromModal()" style="background:#4f46e5; border-color:#4338ca; padding:7px 16px;">
+                <i class="fas fa-check"></i> Aplicar Sombra
             </button>
         </div>
     </div>

@@ -3062,6 +3062,104 @@ function generateAndInsertQrCode() {
     }
 }
 
+// ==================== CorelDRAW Drop Shadow™ Engine ====================
+function openDropShadowDialog() {
+    if (state.selectedElements.length === 0) {
+        toast('Selecione um objeto ou texto para aplicar a sombra.', 'info');
+        return;
+    }
+    const modal = document.getElementById('dropShadowModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeDropShadowDialog() {
+    const modal = document.getElementById('dropShadowModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function applyShadowPresetValues(dx, dy, blur, opacity, color) {
+    const dxSlider = document.getElementById('shadowDxSlider');
+    const dxVal = document.getElementById('shadowDxVal');
+    const dySlider = document.getElementById('shadowDySlider');
+    const dyVal = document.getElementById('shadowDyVal');
+    const blurSlider = document.getElementById('shadowBlurSlider');
+    const blurVal = document.getElementById('shadowBlurVal');
+    const opSlider = document.getElementById('shadowOpacitySlider');
+    const opVal = document.getElementById('shadowOpacityVal');
+    const colInput = document.getElementById('shadowColorInput');
+
+    if (dxSlider) { dxSlider.value = dx; if (dxVal) dxVal.textContent = dx; }
+    if (dySlider) { dySlider.value = dy; if (dyVal) dyVal.textContent = dy; }
+    if (blurSlider) { blurSlider.value = blur; if (blurVal) blurVal.textContent = blur; }
+    if (opSlider) { opSlider.value = opacity; if (opVal) opVal.textContent = opacity; }
+    if (colInput) colInput.value = color;
+}
+
+function applyDropShadowFromModal() {
+    if (state.selectedElements.length === 0) {
+        closeDropShadowDialog();
+        return;
+    }
+
+    const dx = parseFloat(document.getElementById('shadowDxSlider')?.value || '6');
+    const dy = parseFloat(document.getElementById('shadowDySlider')?.value || '6');
+    const blur = parseFloat(document.getElementById('shadowBlurSlider')?.value || '8');
+    const opacityVal = parseInt(document.getElementById('shadowOpacitySlider')?.value || '50', 10);
+    const color = document.getElementById('shadowColorInput')?.value || '#000000';
+    const opacity = opacityVal / 100;
+
+    const mainSvg = document.getElementById('mainSvgCanvas');
+    let defs = mainSvg.querySelector('defs');
+    if (!defs) {
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        mainSvg.prepend(defs);
+    }
+
+    const filterId = `dropshadow_${Date.now()}`;
+    const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+    filter.setAttribute('id', filterId);
+    filter.setAttribute('x', '-50%');
+    filter.setAttribute('y', '-50%');
+    filter.setAttribute('width', '200%');
+    filter.setAttribute('height', '200%');
+
+    const feShadow = document.createElementNS('http://www.w3.org/2000/svg', 'feDropShadow');
+    feShadow.setAttribute('dx', dx.toString());
+    feShadow.setAttribute('dy', dy.toString());
+    feShadow.setAttribute('stdDeviation', (blur / 2).toFixed(1));
+    feShadow.setAttribute('flood-color', color);
+    feShadow.setAttribute('flood-opacity', opacity.toFixed(2));
+
+    filter.appendChild(feShadow);
+    defs.appendChild(filter);
+
+    state.selectedElements.forEach(el => {
+        el.setAttribute('filter', `url(#${filterId})`);
+    });
+
+    closeDropShadowDialog();
+    renderSelectionOverlay();
+    updateLayersTree();
+    updatePropertyBar();
+    saveState('Sombra Projetada');
+    toast('⚡ Efeito de Sombra Projetada aplicado com sucesso!', 'ok');
+}
+
+function removeDropShadowFromSelected() {
+    if (state.selectedElements.length === 0) return;
+
+    state.selectedElements.forEach(el => {
+        el.removeAttribute('filter');
+    });
+
+    closeDropShadowDialog();
+    renderSelectionOverlay();
+    updateLayersTree();
+    updatePropertyBar();
+    saveState('Remover Sombra');
+    toast('Sombra removida do(s) objeto(s).', 'ok');
+}
+
 function initKeyboardShortcuts() {
     // ---- Bloquear zoom nativo do browser em toda a janela ----
     window.addEventListener('wheel', (e) => {
