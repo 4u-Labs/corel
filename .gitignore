@@ -3,3 +3,6 @@
 scratch/
 .env
 data/*.db
+desktop/node_modules/
+desktop/dist/
+desktop/package-lock.json
