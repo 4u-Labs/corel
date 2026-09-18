@@ -13,6 +13,10 @@
     "dist": "electron-builder --linux"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/4u-Labs/corel2.git"
+  },
   "devDependencies": {
     "electron": "^31.0.0",
     "electron-builder": "^24.13.3"
@@ -20,23 +24,33 @@
   "build": {
     "appId": "com.fourulabs.corelclone",
     "productName": "CorelClone Pro",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "4u-Labs",
+        "repo": "corel2"
+      }
+    ],
     "directories": {
       "output": "dist"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": ["AppImage"],
       "icon": "../corelicon.png",
       "category": "Graphics",
-      "maintainer": "contato@4u.ia.br"
+      "maintainer": "contato@4u.ia.br",
+      "artifactName": "CorelClone.${ext}"
     },
     "win": {
       "target": ["nsis"],
-      "icon": "../corelicon.png"
+      "icon": "../corelicon.png",
+      "artifactName": "CorelClone-Setup.${ext}"
     },
     "mac": {
       "target": ["dmg"],
       "icon": "../corelicon.png",
-      "category": "public.app-category.graphics-design"
+      "category": "public.app-category.graphics-design",
+      "artifactName": "CorelClone.${ext}"
     }
   }
 }
