@@ -165,7 +165,11 @@ function initToolPalette() {
             }
             if (e.key.toLowerCase() === 'u') {
                 e.preventDefault();
-                ungroupSelected();
+                if (e.shiftKey || e.altKey) {
+                    ungroupAll();
+                } else {
+                    ungroupSelected();
+                }
                 return;
             }
             if (e.key.toLowerCase() === 'd') {
@@ -803,21 +807,19 @@ function handleTransformMove(pt, e) {
         }
 
         t.origProps.forEach(item => {
-            if (item.el.hasAttribute('x')) item.el.setAttribute('x', Math.round(item.x + actualDx).toString());
-            if (item.el.hasAttribute('y')) item.el.setAttribute('y', Math.round(item.y + actualDy).toString());
-            if (item.el.hasAttribute('cx')) item.el.setAttribute('cx', Math.round(item.x + actualDx).toString());
-            if (item.el.hasAttribute('cy')) item.el.setAttribute('cy', Math.round(item.y + actualDy).toString());
-            if (item.el.tagName.toLowerCase() === 'path' || item.el.tagName.toLowerCase() === 'g') {
-                let origTx = 0, origTy = 0;
-                const matchTranslate = item.transform.match(/translate\(\s*([\d.-]+)[\s,]+([\d.-]+)\s*\)/);
-                if (matchTranslate) {
-                    origTx = parseFloat(matchTranslate[1]) || 0;
-                    origTy = parseFloat(matchTranslate[2]) || 0;
-                }
+            const hasTransform = Boolean(item.transform && item.transform.trim().length > 0);
+            if (item.el.tagName.toLowerCase() === 'path' || item.el.tagName.toLowerCase() === 'g' || hasTransform) {
+                let origTx = item.tx;
+                let origTy = item.ty;
                 const withoutTranslate = item.transform.replace(/translate\([^)]*\)/g, '').trim();
                 const newTx = Math.round(origTx + actualDx);
                 const newTy = Math.round(origTy + actualDy);
                 item.el.setAttribute('transform', `translate(${newTx}, ${newTy}) ${withoutTranslate}`.trim());
+            } else {
+                if (item.el.hasAttribute('x')) item.el.setAttribute('x', Math.round(item.x + actualDx).toString());
+                if (item.el.hasAttribute('y')) item.el.setAttribute('y', Math.round(item.y + actualDy).toString());
+                if (item.el.hasAttribute('cx')) item.el.setAttribute('cx', Math.round(item.x + actualDx).toString());
+                if (item.el.hasAttribute('cy')) item.el.setAttribute('cy', Math.round(item.y + actualDy).toString());
             }
         });
     } else if (t.type === 'rot') {
@@ -879,12 +881,19 @@ function handleTransformMove(pt, e) {
 
         t.origProps.forEach(item => {
             const tag = item.el.tagName.toLowerCase();
-            if (tag === 'g' || tag === 'path') {
+            const hasTransform = Boolean(item.transform && item.transform.trim().length > 0);
+
+            if (tag === 'g' || tag === 'path' || hasTransform) {
                 const newTx = anchorX + (item.tx - anchorX) * scaleX;
                 const newTy = anchorY + (item.ty - anchorY) * scaleY;
                 const newSx = item.sx * scaleX;
                 const newSy = item.sy * scaleY;
-                item.el.setAttribute('transform', `translate(${Math.round(newTx)}, ${Math.round(newTy)}) scale(${newSx.toFixed(6)}, ${newSy.toFixed(6)})`);
+                const otherTransforms = item.transform
+                    .replace(/translate\([^)]*\)/g, '')
+                    .replace(/scale\([^)]*\)/g, '')
+                    .trim();
+                const transStr = `translate(${Math.round(newTx * 100) / 100}, ${Math.round(newTy * 100) / 100}) scale(${newSx.toFixed(6)}, ${newSy.toFixed(6)}) ${otherTransforms}`.trim();
+                item.el.setAttribute('transform', transStr);
             } else if (tag === 'image' || tag === 'rect') {
                 const newX = anchorX + (item.x - anchorX) * scaleX;
                 const newY = anchorY + (item.y - anchorY) * scaleY;
@@ -1049,6 +1058,11 @@ function updatePropertyBarVisibility() {
     if (traceDivider) traceDivider.style.display = hasImage ? 'block' : 'none';
     if (nodeGroup) nodeGroup.style.display = isNodeTool ? 'flex' : 'none';
     if (nodeDivider) nodeDivider.style.display = isNodeTool ? 'block' : 'none';
+
+    const btnToggleBg = document.getElementById('btnToggleDuplicateBg');
+    if (btnToggleBg) {
+        btnToggleBg.style.display = hasImage ? 'inline-flex' : 'none';
+    }
 }
 
 function updatePropertyBarValues() {
@@ -1171,7 +1185,7 @@ function updateLayersTree() {
                 label = 'Caminho Vetorial';
             }
         }
-        else if (tagName === 'image') { icon = 'fas fa-image'; label = 'Imagem / Ilustração'; }
+        else if (tagName === 'image') { icon = 'fas fa-image'; label = 'Imagem / Fundo Bitmap'; }
         else if (tagName === 'g') {
             if (child.classList && child.classList.contains('imported-svg-group')) {
                 icon = 'fas fa-object-group';
@@ -1182,24 +1196,104 @@ function updateLayersTree() {
             }
         }
 
+        const isHidden = child.style.display === 'none' || child.getAttribute('visibility') === 'hidden';
+
         item.innerHTML = `
-            <div style="display:flex; align-items:center; gap:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            <div style="display:flex; align-items:center; gap:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
                 <i class="${icon}" style="color: #a855f7; width: 14px;"></i>
                 <span>${label}</span>
             </div>
-            <div class="layer-item-actions">
-                <button type="button" class="btn-icon" style="width:22px; height:22px; font-size:10px;" title="Alternar Visibilidade" onclick="event.stopPropagation(); toggleElementVisibility(this, '${child.id || index}')">
-                    <i class="fas fa-eye"></i>
+            <div class="layer-item-actions" style="display:flex; gap:4px;">
+                <button type="button" class="btn-icon btn-toggle-vis ${isHidden ? 'text-slate-500' : ''}" style="width:22px; height:22px; font-size:10px;" title="Alternar Visibilidade">
+                    <i class="fas ${isHidden ? 'fa-eye-slash' : 'fa-eye'}"></i>
                 </button>
-                <button type="button" class="btn-icon text-rose-400" style="width:22px; height:22px; font-size:10px;" title="Excluir" onclick="event.stopPropagation(); deleteSingleObject(${children.length - 1 - index})">
+                <button type="button" class="btn-icon btn-delete-layer text-rose-400" style="width:22px; height:22px; font-size:10px;" title="Excluir">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
         `;
 
+        const btnVis = item.querySelector('.btn-toggle-vis');
+        if (btnVis) {
+            btnVis.onclick = (e) => {
+                e.stopPropagation();
+                toggleElementVisibility(btnVis, child);
+            };
+        }
+
+        const btnDel = item.querySelector('.btn-delete-layer');
+        if (btnDel) {
+            btnDel.onclick = (e) => {
+                e.stopPropagation();
+                child.remove();
+                deselectAll();
+                saveState('Excluir Objeto');
+                updateLayersTree();
+            };
+        }
+
         item.onclick = () => selectElement(child, false);
         tree.appendChild(item);
     });
+}
+
+function toggleElementVisibility(btn, target) {
+    if (!target) return;
+    const isHidden = target.style.display === 'none' || target.getAttribute('visibility') === 'hidden';
+    if (isHidden) {
+        target.style.display = '';
+        target.removeAttribute('visibility');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-eye"></i>';
+            btn.classList.remove('text-slate-500');
+        }
+        toast('Camada visível', 'ok');
+    } else {
+        target.style.display = 'none';
+        if (state.selectedElements.includes(target)) {
+            deselectAll();
+        }
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            btn.classList.add('text-slate-500');
+        }
+        toast('Camada ocultada', 'ok');
+    }
+    renderSelectionOverlay();
+    saveState('Alternar Visibilidade de Camada');
+}
+
+function toggleImportedBgImage() {
+    const images = Array.from(document.querySelectorAll('#layerGroupMain image'));
+    if (images.length === 0) {
+        toast('Nenhuma imagem bitmap encontrada no projeto.', 'warn');
+        return;
+    }
+    const anyVisible = images.some(img => img.style.display !== 'none' && img.getAttribute('visibility') !== 'hidden');
+    images.forEach(img => {
+        if (anyVisible) {
+            img.style.display = 'none';
+        } else {
+            img.style.display = '';
+            img.removeAttribute('visibility');
+        }
+    });
+
+    const btn = document.getElementById('btnToggleDuplicateBg');
+    if (btn) {
+        if (anyVisible) {
+            btn.innerHTML = '<i class="fas fa-eye"></i> Mostrar Fundo';
+            btn.classList.add('bg-purple-900/50');
+            toast('Imagem de fundo ocultada! Texto duplicado do modelo removido.', 'ok');
+        } else {
+            btn.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar Fundo';
+            btn.classList.remove('bg-purple-900/50');
+            toast('Imagem de fundo reexibida.', 'ok');
+        }
+    }
+    renderSelectionOverlay();
+    updateLayersTree();
+    saveState(anyVisible ? 'Ocultar Fundo / Texto Duplicado' : 'Exibir Fundo');
 }
 
 function clearAllObjects() {
@@ -1218,6 +1312,7 @@ function deleteSingleObject(index) {
         layerGroup.children[index].remove();
         deselectAll();
         saveState('Excluir Objeto');
+        updateLayersTree();
     }
 }
 
@@ -1320,6 +1415,32 @@ function ungroupSelected() {
     saveState('Desagrupar Objetos');
     updateLayersTree();
     toast('Objetos desagrupados (Ctrl+U) — camadas individuais liberadas!', 'ok');
+}
+
+function ungroupAll() {
+    if (state.selectedElements.length === 0) {
+        const allGroups = Array.from(document.querySelectorAll('#layerGroupMain > g'));
+        if (allGroups.length > 0) {
+            state.selectedElements = allGroups;
+        } else {
+            toast('Nenhum grupo selecionado para desagrupar.', 'warn');
+            return;
+        }
+    }
+
+    let hasGroups = true;
+    let iterations = 0;
+
+    while (hasGroups && iterations < 15) {
+        hasGroups = false;
+        iterations++;
+        const currentGroups = state.selectedElements.filter(el => el.tagName.toLowerCase() === 'g');
+        if (currentGroups.length > 0) {
+            hasGroups = true;
+            ungroupSelected();
+        }
+    }
+    toast('Todos os grupos foram desagrupados em camadas individuais!', 'ok');
 }
 
 // ==================== Histórico & Undo / Redo ====================
@@ -1747,15 +1868,59 @@ function importSVGContent(svgText) {
             g.setAttribute('transform', `translate(${posX}, ${posY})`);
         }
 
-        const children = Array.from(svgEl.children).filter(el => !['defs', 'style', 'metadata'].includes(el.tagName.toLowerCase()));
-        children.forEach(child => g.appendChild(child.cloneNode(true)));
+        // Desempacotar wrappers transparentes de nível único
+        function extractVisualNodes(node) {
+            const list = Array.from(node.children).filter(el => !['defs', 'style', 'metadata'].includes(el.tagName.toLowerCase()));
+            const result = [];
+            list.forEach(item => {
+                let curr = item;
+                while (curr.tagName.toLowerCase() === 'g' && curr.children.length === 1 && curr.firstElementChild.tagName.toLowerCase() === 'g' && !curr.getAttribute('transform')) {
+                    curr = curr.firstElementChild;
+                }
+                if (curr.classList && curr.classList.contains('Page')) {
+                    Array.from(curr.children).forEach(pch => {
+                        if (pch.tagName.toLowerCase() === 'g' && pch.children.length === 1 && !pch.getAttribute('transform')) {
+                            const inner = pch.firstElementChild;
+                            if (['path', 'image', 'text', 'rect', 'ellipse', 'polygon'].includes(inner.tagName.toLowerCase())) {
+                                result.push(inner);
+                                return;
+                            }
+                        }
+                        result.push(pch);
+                    });
+                } else if (curr.tagName.toLowerCase() === 'g' && curr.children.length === 1 && !curr.getAttribute('transform')) {
+                    const inner = curr.firstElementChild;
+                    if (['path', 'image', 'text', 'rect', 'ellipse', 'polygon'].includes(inner.tagName.toLowerCase())) {
+                        result.push(inner);
+                    } else {
+                        result.push(curr);
+                    }
+                } else {
+                    result.push(curr);
+                }
+            });
+            return result;
+        }
+
+        const visualNodes = extractVisualNodes(svgEl);
+        visualNodes.forEach(child => g.appendChild(child.cloneNode(true)));
 
         layerGroup.appendChild(g);
         selectElement(g, false);
 
+        // Se contiver imagem bitmap e vetores sobrepostos, ativar atalho de ocultar fundo
+        const hasImg = g.querySelector('image') !== null;
+        const hasPaths = g.querySelector('path') !== null;
+        if (hasImg && hasPaths) {
+            const btnBg = document.getElementById('btnToggleDuplicateBg');
+            if (btnBg) btnBg.style.display = 'inline-flex';
+            toast('Vetor importado! Se houver texto duplicado do modelo original na imagem de fundo, use o botão "Ocultar Fundo" na barra superior.', 'info');
+        } else {
+            toast('Vetor importado com sucesso em 100% de qualidade!', 'ok');
+        }
+
         saveState('Importar Vetores (SVG/CDR/PDF)');
         updateLayersTree();
-        toast('Vetor importado com sucesso em 100% de qualidade!', 'ok');
     } catch (err) {
         console.error(err);
         alert('Erro ao importar SVG: ' + err.message);
@@ -2827,4 +2992,7 @@ window.toggleNodeSmoothness = toggleNodeSmoothness;
 window.centerSelectedToPage = centerSelectedToPage;
 window.deleteSelectedGuideline = deleteSelectedGuideline;
 window.renderGuidelines = renderGuidelines;
+window.toggleElementVisibility = toggleElementVisibility;
+window.toggleImportedBgImage = toggleImportedBgImage;
+window.ungroupAll = ungroupAll;
 

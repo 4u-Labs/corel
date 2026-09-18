@@ -172,6 +172,8 @@ $baseDir = './';
             <button type="button" class="btn-tool-sm" onclick="centerSelectedToPage()" title="Centralizar na Prancheta (Tecla P)"><i class="fas fa-bullseye text-amber-400"></i> P (Centro)</button>
             <button type="button" class="btn-tool-sm" onclick="groupSelected()" title="Agrupar Objetos (Ctrl+G)"><i class="fas fa-object-group"></i> Agrupar</button>
             <button type="button" class="btn-tool-sm" onclick="ungroupSelected()" title="Desagrupar Objetos (Ctrl+U)"><i class="fas fa-object-ungroup"></i> Desagrupar</button>
+            <button type="button" class="btn-tool-sm" onclick="ungroupAll()" title="Desagrupar Tudo (Ctrl+Alt+U)"><i class="fas fa-cubes-stacked"></i> Desagrupar Tudo</button>
+            <button type="button" class="btn-tool-sm text-purple-300" id="btnToggleDuplicateBg" onclick="toggleImportedBgImage()" style="display:none;" title="Ocultar imagem de fundo para remover texto duplicado"><i class="fas fa-eye-slash"></i> Ocultar Fundo</button>
             <button type="button" class="btn-tool-sm" onclick="duplicateSelected()" title="Duplicar Objeto (Ctrl+D)"><i class="fas fa-clone"></i> Duplicar</button>
             <button type="button" class="btn-tool-sm text-rose-300" onclick="deleteSelected()" title="Excluir Selecionado (Del)"><i class="fas fa-trash-alt"></i></button>
         </div>

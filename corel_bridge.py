@@ -39,6 +39,9 @@ def clean_libreoffice_svg(svg_bytes):
     - Removes dummy invisible BoundingBox rects
     - Removes empty Master Slide / presentation background groups
     - Prunes discarded objects placed outside the page margins (pasteboard / mesa de trabalho)
+    - Prunes empty <g> containers recursively
+    - Unwraps single-child transparent wrappers (SlideGroup -> g -> container-id1 -> id1 -> Page)
+      so the visual shapes (images, paths, curves) are direct top-level elements.
     """
     try:
         ET.register_namespace('', 'http://www.w3.org/2000/svg')
@@ -53,7 +56,7 @@ def clean_libreoffice_svg(svg_bytes):
         else:
             vb_min_x, vb_min_y, vb_w, vb_h = 0, 0, 8000, 16000
 
-        # Prune unwanted elements
+        # 1. Prune unwanted elements (BoundingBox rects, Master Slide, pasteboard items)
         for parent in list(root.iter()):
             for child in list(parent):
                 tag = child.tag.split('}')[-1]
@@ -96,6 +99,55 @@ def clean_libreoffice_svg(svg_bytes):
                             if xs and min(xs) >= vb_w * 1.02:
                                 parent.remove(child)
                                 continue
+
+        # 2. Recursively prune empty groups
+        changed = True
+        while changed:
+            changed = False
+            for parent in list(root.iter()):
+                for child in list(parent):
+                    if child.tag.split('}')[-1] == 'g' and len(child) == 0:
+                        parent.remove(child)
+                        changed = True
+
+        # 3. Unwrap transparent LibreOffice group hierarchies
+        defs_and_styles = [c for c in list(root) if c.tag.split('}')[-1] in ('defs', 'style', 'metadata')]
+        
+        def find_visual_elements(node):
+            res = []
+            for c in list(node):
+                tag = c.tag.split('}')[-1]
+                if tag in ('defs', 'style', 'metadata'):
+                    continue
+                # If group with only 1 child group and no attributes/transforms, unwrap
+                curr = c
+                while curr.tag.split('}')[-1] == 'g' and len(curr) == 1 and list(curr)[0].tag.split('}')[-1] == 'g' and not curr.attrib.get('transform'):
+                    curr = list(curr)[0]
+                if curr.attrib.get('class') == 'Page':
+                    for pch in list(curr):
+                        # also unwrap single-element dummy wrappers like <g class='com.sun.star...'><path ...></g>
+                        if pch.tag.split('}')[-1] == 'g' and len(pch) == 1 and not pch.attrib.get('transform'):
+                            inner = list(pch)[0]
+                            if inner.tag.split('}')[-1] in ('path', 'image', 'text', 'rect', 'ellipse', 'polygon'):
+                                res.append(inner)
+                                continue
+                        res.append(pch)
+                else:
+                    if curr.tag.split('}')[-1] == 'g' and len(curr) == 1 and not curr.attrib.get('transform'):
+                        inner = list(curr)[0]
+                        if inner.tag.split('}')[-1] in ('path', 'image', 'text', 'rect', 'ellipse', 'polygon'):
+                            res.append(inner)
+                            continue
+                    res.append(curr)
+            return res
+
+        visual_nodes = find_visual_elements(root)
+        if visual_nodes:
+            for c in list(root):
+                if c not in defs_and_styles:
+                    root.remove(c)
+            for vn in visual_nodes:
+                root.append(vn)
 
         return ET.tostring(root, encoding='utf-8')
     except Exception as e:
