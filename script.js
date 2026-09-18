@@ -32,7 +32,9 @@ const state = {
     activeTransform: null,
     nodeEdit: { activePath: null, nodes: [], activeNodeIndex: -1 },
     penPath: null,
-    penPoints: []
+    penPoints: [],
+    isPowerClipping: false,
+    powerClipTargetContent: null
 };
 
 // Standard Corel Color Palette (40+ classic swatches)
@@ -530,6 +532,27 @@ function initCanvasEvents() {
 
         const pt = getSvgCoords(e);
         state.drawStart = pt;
+
+        // 0. PowerClip Destination Pick Mode
+        if (state.isPowerClipping) {
+            e.stopPropagation();
+            const target = e.target;
+            if (target && target.closest('#layerGroupMain')) {
+                const containerEl = target.closest('#layerGroupMain > *');
+                if (containerEl && containerEl !== state.powerClipTargetContent) {
+                    createPowerClip(state.powerClipTargetContent, containerEl);
+                    state.isPowerClipping = false;
+                    state.powerClipTargetContent = null;
+                    document.body.style.cursor = 'default';
+                    return;
+                }
+            }
+            toast('PowerClip cancelado (clique fora do recipiente).', 'info');
+            state.isPowerClipping = false;
+            state.powerClipTargetContent = null;
+            document.body.style.cursor = 'default';
+            return;
+        }
 
         // 1. Pan Tool Mode
         if (state.activeTool === 'pan' || e.spaceKey) {
@@ -1278,6 +1301,11 @@ function updatePropertyBar() {
         const btnTrace = document.getElementById('btnTraceSelected');
         if (btnTrace) btnTrace.style.display = hasImg ? 'inline-flex' : 'none';
 
+        // Show/hide Extract PowerClip button
+        const isPowerClip = state.selectedElements.some(el => el.classList && el.classList.contains('corel-powerclip-group'));
+        const btnExtractPC = document.getElementById('btnExtractPowerClip');
+        if (btnExtractPC) btnExtractPC.style.display = isPowerClip ? 'inline-flex' : 'none';
+
         // Update blend mode and opacity in right docker
         const first = state.selectedElements[0];
         const opacityVal = Math.round((parseFloat(first.getAttribute('opacity') || 1)) * 100);
@@ -1294,6 +1322,8 @@ function updatePropertyBar() {
         if (btnBg) btnBg.style.display = 'none';
         const btnTrace = document.getElementById('btnTraceSelected');
         if (btnTrace) btnTrace.style.display = 'none';
+        const btnExtractPC = document.getElementById('btnExtractPowerClip');
+        if (btnExtractPC) btnExtractPC.style.display = 'none';
     }
 }
 
@@ -2575,6 +2605,139 @@ function ungroupSelected() {
         saveState('Desagrupar (Ctrl+U)');
         toast('Objetos desagrupados!', 'ok');
     }
+}
+
+// ==================== CorelDRAW PowerClip™ Engine ====================
+function applyPowerClip() {
+    if (state.selectedElements.length === 0) {
+        toast('Selecione primeiro a imagem ou objeto que deseja colocar dentro do recipiente.', 'info');
+        return;
+    }
+
+    // Se houver 2 ou mais objetos selecionados: o primeiro é o conteúdo e o último é o recipiente
+    if (state.selectedElements.length >= 2) {
+        const container = state.selectedElements[state.selectedElements.length - 1];
+        const content = state.selectedElements[0];
+        createPowerClip(content, container);
+        return;
+    }
+
+    // Se houver 1 objeto selecionado: modo interativo estilo CorelDRAW
+    state.powerClipTargetContent = state.selectedElements[0];
+    state.isPowerClipping = true;
+    document.body.style.cursor = 'crosshair';
+    toast('🎯 Clique sobre a forma (círculo, retângulo, etc.) que será o recipiente do PowerClip.', 'info');
+}
+
+function createPowerClip(contentEl, containerEl) {
+    if (!contentEl || !containerEl || contentEl === containerEl) {
+        toast('Recipiente inválido para o PowerClip.', 'err');
+        return;
+    }
+
+    const mainSvg = document.getElementById('mainSvgCanvas');
+    let defs = mainSvg.querySelector('defs');
+    if (!defs) {
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        mainSvg.prepend(defs);
+    }
+
+    const clipId = `powerclip_${Date.now()}`;
+    const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+    clipPath.setAttribute('id', clipId);
+
+    // Clona a forma geométrica do recipiente para servir como máscara de corte
+    const clipShape = containerEl.cloneNode(true);
+    clipShape.removeAttribute('id');
+    clipShape.removeAttribute('stroke');
+    clipShape.removeAttribute('stroke-width');
+    clipShape.setAttribute('fill', '#ffffff');
+    clipPath.appendChild(clipShape);
+    defs.appendChild(clipPath);
+
+    // Cria o grupo do PowerClip
+    const powerClipGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    powerClipGroup.setAttribute('class', 'corel-powerclip-group user-group');
+    powerClipGroup.setAttribute('data-powerclip-id', clipId);
+
+    // O recipiente original é mantido como moldura (preservando borda / preenchimento de fundo)
+    const frame = containerEl.cloneNode(true);
+    frame.setAttribute('class', 'powerclip-frame');
+    frame.removeAttribute('id');
+    frame.style.pointerEvents = 'none';
+
+    // Grupo de conteúdo com o clip-path aplicado
+    const contentGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    contentGroup.setAttribute('class', 'powerclip-content');
+    contentGroup.setAttribute('clip-path', `url(#${clipId})`);
+    contentGroup.appendChild(contentEl);
+
+    powerClipGroup.appendChild(frame);
+    powerClipGroup.appendChild(contentGroup);
+
+    const parent = containerEl.parentNode || document.getElementById('layerGroupMain');
+    parent.insertBefore(powerClipGroup, containerEl);
+    containerEl.remove();
+
+    selectElement(powerClipGroup, false);
+    saveState('PowerClip: Colocar no Recipiente');
+    updateLayersTree();
+    updatePropertyBar();
+    toast('⚡ PowerClip™ aplicado com sucesso!', 'ok');
+}
+
+function extractPowerClip() {
+    if (state.selectedElements.length === 0) {
+        toast('Selecione um PowerClip para extrair o conteúdo.', 'info');
+        return;
+    }
+
+    const group = state.selectedElements.find(el => el.classList && el.classList.contains('corel-powerclip-group')) ||
+                  (state.selectedElements[0].closest && state.selectedElements[0].closest('.corel-powerclip-group'));
+
+    if (!group) {
+        toast('O objeto selecionado não é um PowerClip.', 'err');
+        return;
+    }
+
+    const clipId = group.getAttribute('data-powerclip-id');
+    const frame = group.querySelector('.powerclip-frame');
+    const contentGroup = group.querySelector('.powerclip-content');
+    const parent = group.parentNode || document.getElementById('layerGroupMain');
+
+    const newSelected = [];
+
+    // Restaura o recipiente como forma independente
+    if (frame) {
+        const restoredContainer = frame.cloneNode(true);
+        restoredContainer.removeAttribute('class');
+        restoredContainer.style.pointerEvents = '';
+        parent.insertBefore(restoredContainer, group);
+        newSelected.push(restoredContainer);
+    }
+
+    // Restaura os conteúdos internos
+    if (contentGroup) {
+        Array.from(contentGroup.children).forEach(child => {
+            parent.insertBefore(child, group);
+            newSelected.push(child);
+        });
+    }
+
+    // Limpa a definição de clipPath
+    if (clipId) {
+        const cp = document.getElementById(clipId);
+        if (cp) cp.remove();
+    }
+
+    group.remove();
+
+    state.selectedElements = newSelected;
+    renderSelectionOverlay();
+    updateLayersTree();
+    updatePropertyBar();
+    saveState('PowerClip: Extrair Conteúdo');
+    toast('Conteúdo do PowerClip extraído com sucesso!', 'ok');
 }
 
 // ==================== Keyboard Shortcuts ====================

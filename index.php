@@ -110,6 +110,10 @@ $baseDir = './';
                     <button type="button" class="dropdown-item" onclick="alignSelected('T')"><i class="fas fa-arrow-up"></i> Alinhar pelo Topo <span class="shortcut">T</span></button>
                     <button type="button" class="dropdown-item" onclick="alignSelected('B')"><i class="fas fa-arrow-down"></i> Alinhar pela Base <span class="shortcut">B</span></button>
                     <div class="dropdown-separator"></div>
+                    <!-- PowerClip CorelDRAW -->
+                    <button type="button" class="dropdown-item" onclick="applyPowerClip()"><i class="fas fa-sign-in-alt text-amber-600"></i> PowerClip: Colocar no Recipiente...</button>
+                    <button type="button" class="dropdown-item" onclick="extractPowerClip()"><i class="fas fa-sign-out-alt text-amber-600"></i> PowerClip: Extrair Conteúdo</button>
+                    <div class="dropdown-separator"></div>
                     <button type="button" class="dropdown-item" onclick="orderSelected('front')"><i class="fas fa-angle-double-up"></i> Trazer para Frente <span class="shortcut">Shift+PgUp</span></button>
                     <button type="button" class="dropdown-item" onclick="orderSelected('back')"><i class="fas fa-angle-double-down"></i> Enviar para Trás <span class="shortcut">Shift+PgDn</span></button>
                 </div>
@@ -297,6 +301,11 @@ $baseDir = './';
                     <button type="button" class="t-btn" onclick="alignSelected('E')" title="Centralizar Vertical (E)"><i class="fas fa-arrows-alt-v"></i></button>
                     <button type="button" class="t-btn" onclick="alignSelected('B')" title="Alinhar pela Base (B)"><i class="fas fa-arrow-down" style="font-size:10px;"></i></button>
                     <button type="button" class="t-btn" onclick="alignSelected('P')" title="Centralizar na Página (P)"><i class="fas fa-crosshairs text-blue-600"></i></button>
+                <div class="tool-sep"></div>
+                <!-- PowerClip Quick Buttons -->
+                <div class="toolbar-group">
+                    <button type="button" class="t-btn" onclick="applyPowerClip()" title="PowerClip: Colocar no Recipiente"><i class="fas fa-sign-in-alt text-amber-600"></i></button>
+                    <button type="button" class="t-btn" id="btnExtractPowerClip" onclick="extractPowerClip()" style="display:none;" title="PowerClip: Extrair Conteúdo"><i class="fas fa-sign-out-alt text-amber-600"></i></button>
                 </div>
                 <div class="tool-sep"></div>
                 <!-- PowerTRACE Action Button for Selected Bitmaps -->
