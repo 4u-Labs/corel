@@ -64,6 +64,8 @@ $baseDir = './';
                     <button type="button" class="dropdown-item" onclick="exportDocument('pdf')"><i class="fas fa-file-pdf"></i> Exportar como PDF...</button>
                     <button type="button" class="dropdown-item" onclick="exportDocument('png')"><i class="fas fa-file-image"></i> Exportar como PNG HD...</button>
                     <div class="dropdown-separator"></div>
+                    <button type="button" class="dropdown-item" onclick="openPrintExportDialog()"><i class="fas fa-print text-red-600"></i> Preparar para Impressão / Gráfica... <span class="shortcut">Ctrl+P</span></button>
+                    <div class="dropdown-separator"></div>
                     <a href="http://127.0.0.1:54321/" target="_blank" class="dropdown-item"><i class="fas fa-desktop text-cyan-600"></i> Abrir no App Local (100% CDR)</a>
                 </div>
             </div>
@@ -202,6 +204,9 @@ $baseDir = './';
                 </button>
                 <button type="button" class="t-btn-labeled" onclick="exportDocument('png')" title="Exportar imagem PNG HD">
                     <i class="fas fa-file-image text-emerald-600"></i> PNG
+                </button>
+                <button type="button" class="t-btn-labeled" onclick="openPrintExportDialog()" title="Pré-impressão com Sangria e Marcas de Corte (Ctrl+P)">
+                    <i class="fas fa-print text-purple-700"></i> Gráfica
                 </button>
             </div>
 
@@ -951,6 +956,80 @@ $baseDir = './';
             <button type="button" class="btn-primary" onclick="applyDropShadowFromModal()" style="background:#4f46e5; border-color:#4338ca; padding:7px 16px;">
                 <i class="fas fa-check"></i> Aplicar Sombra
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== Print / Pre-press Export Modal ==================== -->
+<div id="printExportModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" style="width: 520px; max-width:95vw;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fas fa-print text-red-600"></i> Preparar para Impressão / Gráfica (Pré-impressão)</div>
+            <button type="button" class="btn-win-ctl" onclick="closePrintExportDialog()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:11.5px; color:#444; margin-bottom:12px;">
+                Adicione sangria de segurança, marcas de corte de guilhotina e miras de registro padrão da indústria gráfica (CorelDRAW Pre-press).
+            </p>
+
+            <div style="background:#f9f9f9; border:1px solid #e0e0e0; border-radius:4px; padding:12px; margin-bottom:12px; display:flex; flex-direction:column; gap:10px;">
+                <!-- Sangria -->
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <label style="font-size:11.5px; font-weight:600; color:#333; display:block;">Sangria de Corte (Bleed):</label>
+                        <span style="font-size:10.5px; color:#777;">Expansão externa para corte perfeito na guilhotina</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <input type="number" id="printBleedInput" class="prop-input" value="3" min="0" max="30" step="1" style="width:55px; text-align:right;">
+                        <span style="font-size:11px; font-weight:600; color:#444;">mm</span>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:2px 7px;" onclick="document.getElementById('printBleedInput').value = '0'">0 mm (Sem Sangria)</button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:2px 7px;" onclick="document.getElementById('printBleedInput').value = '3'">3 mm (Padrão Gráfica)</button>
+                    <button type="button" class="btn-secondary" style="font-size:10.5px; padding:2px 7px;" onclick="document.getElementById('printBleedInput').value = '5'">5 mm (Grande Formato)</button>
+                </div>
+
+                <div style="height:1px; background:#e5e7eb; margin:2px 0;"></div>
+
+                <!-- Opções de Marcas Gráficas -->
+                <label style="font-size:11.5px; font-weight:600; color:#333;">Marcas e Guias de Impressão:</label>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <label style="font-size:11px; color:#444; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="chkCropMarks" checked> Marcas de Corte (Cantos)
+                    </label>
+                    <label style="font-size:11px; color:#444; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="chkRegistrationMarks" checked> Miras de Registro (Alvos CMYK)
+                    </label>
+                    <label style="font-size:11px; color:#444; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="chkColorBars" checked> Barra de Cores (Calibração)
+                    </label>
+                    <label style="font-size:11px; color:#444; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="chkJobInfo" checked> Informações do Arquivo (Data/Hora)
+                    </label>
+                </div>
+            </div>
+
+            <!-- Preview Box / Info -->
+            <div id="printSheetPreviewInfo" style="font-size:11px; color:#555; background:#eff6ff; border:1px solid #bfdbfe; border-radius:4px; padding:8px 12px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-info-circle text-blue-600" style="font-size:14px;"></i>
+                <span id="printSheetSummaryText">Tamanho da prancheta atual. Todas as marcas e sangrias serão calculadas milimetricamente.</span>
+            </div>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <button type="button" class="btn-secondary" onclick="closePrintExportDialog()">Fechar</button>
+            <div style="display:flex; gap:6px;">
+                <button type="button" class="btn-secondary" onclick="executePrintExport('svg')" title="Baixar arquivo SVG vetorial limpo com sangria e marcas">
+                    <i class="fas fa-file-code text-orange-600"></i> Baixar SVG
+                </button>
+                <button type="button" class="btn-secondary" onclick="executePrintExport('png')" title="Baixar imagem em 300 DPI">
+                    <i class="fas fa-file-image text-emerald-600"></i> Baixar PNG 300 DPI
+                </button>
+                <button type="button" class="btn-primary" onclick="executePrintExport('print')" style="background:#dc2626; border-color:#b91c1c; padding:7px 14px;">
+                    <i class="fas fa-print"></i> Imprimir / PDF Vetorial
+                </button>
+            </div>
         </div>
     </div>
 </div>

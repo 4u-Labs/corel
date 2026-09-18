@@ -2363,6 +2363,239 @@ function exportRasterImage(mimeType, filename) {
     img.src = url;
 }
 
+// ==================== CorelDRAW Pre-Press & Print Engine (Bleed & Crop Marks) ====================
+function openPrintExportDialog() {
+    deselectAll();
+    const modal = document.getElementById('printExportModal');
+    if (!modal) return;
+
+    const wMm = Math.round(fromPxToUnit(state.docWidth, 'mm'));
+    const hMm = Math.round(fromPxToUnit(state.docHeight, 'mm'));
+    const summary = document.getElementById('printSheetSummaryText');
+    if (summary) {
+        summary.textContent = `Prancheta atual: ${wMm} x ${hMm} mm. Todas as marcas e sangrias serão calculadas milimetricamente.`;
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closePrintExportDialog() {
+    const modal = document.getElementById('printExportModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function buildPrePressSvg(bleedMm, options) {
+    const docW = state.docWidth;
+    const docH = state.docHeight;
+    const bleedPx = fromUnitToPx(bleedMm, 'mm');
+    const marginMm = Math.max(15, bleedMm + 10);
+    const marginPx = fromUnitToPx(marginMm, 'mm');
+
+    const sheetW = docW + 2 * marginPx;
+    const sheetH = docH + 2 * marginPx;
+
+    const x1 = marginPx;
+    const y1 = marginPx;
+    const x2 = marginPx + docW;
+    const y2 = marginPx + docH;
+
+    const mainSvg = document.getElementById('mainSvgCanvas');
+    const defsEl = mainSvg ? mainSvg.querySelector('defs') : null;
+    const defsHtml = defsEl ? defsEl.innerHTML : '';
+
+    const layerGroup = document.getElementById('layerGroupMain');
+    const contentHtml = layerGroup ? layerGroup.innerHTML : '';
+
+    let extraMarks = '';
+
+    // 1. Marcas de Corte nos 4 Cantos (Crop Marks)
+    if (options.cropMarks) {
+        const d1 = fromUnitToPx(2, 'mm');
+        const d2 = fromUnitToPx(9, 'mm');
+        const strokeStyle = 'stroke="#000000" stroke-width="0.5" stroke-linecap="square"';
+
+        extraMarks += `
+        <g id="crop_marks">
+            <!-- Top-Left -->
+            <line x1="${(x1 - d2).toFixed(2)}" y1="${y1.toFixed(2)}" x2="${(x1 - d1).toFixed(2)}" y2="${y1.toFixed(2)}" ${strokeStyle} />
+            <line x1="${x1.toFixed(2)}" y1="${(y1 - d2).toFixed(2)}" x2="${x1.toFixed(2)}" y2="${(y1 - d1).toFixed(2)}" ${strokeStyle} />
+
+            <!-- Top-Right -->
+            <line x1="${(x2 + d1).toFixed(2)}" y1="${y1.toFixed(2)}" x2="${(x2 + d2).toFixed(2)}" y2="${y1.toFixed(2)}" ${strokeStyle} />
+            <line x1="${x2.toFixed(2)}" y1="${(y1 - d2).toFixed(2)}" x2="${x2.toFixed(2)}" y2="${(y1 - d1).toFixed(2)}" ${strokeStyle} />
+
+            <!-- Bottom-Left -->
+            <line x1="${(x1 - d2).toFixed(2)}" y1="${y2.toFixed(2)}" x2="${(x1 - d1).toFixed(2)}" y2="${y2.toFixed(2)}" ${strokeStyle} />
+            <line x1="${x1.toFixed(2)}" y1="${(y2 + d1).toFixed(2)}" x2="${x1.toFixed(2)}" y2="${(y2 + d2).toFixed(2)}" ${strokeStyle} />
+
+            <!-- Bottom-Right -->
+            <line x1="${(x2 + d1).toFixed(2)}" y1="${y2.toFixed(2)}" x2="${(x2 + d2).toFixed(2)}" y2="${y2.toFixed(2)}" ${strokeStyle} />
+            <line x1="${x2.toFixed(2)}" y1="${(y2 + d1).toFixed(2)}" x2="${x2.toFixed(2)}" y2="${(y2 + d2).toFixed(2)}" ${strokeStyle} />
+        </g>`;
+    }
+
+    // 2. Miras de Registro (Registration Targets)
+    if (options.registrationMarks) {
+        const r1 = fromUnitToPx(3.5, 'mm');
+        const r2 = fromUnitToPx(1.8, 'mm');
+        const crossLen = fromUnitToPx(5, 'mm');
+
+        const createTarget = (cx, cy) => `
+            <g transform="translate(${cx.toFixed(2)}, ${cy.toFixed(2)})">
+                <circle cx="0" cy="0" r="${r1.toFixed(2)}" fill="none" stroke="#000000" stroke-width="0.5" />
+                <circle cx="0" cy="0" r="${r2.toFixed(2)}" fill="none" stroke="#000000" stroke-width="0.5" />
+                <line x1="${(-crossLen).toFixed(2)}" y1="0" x2="${crossLen.toFixed(2)}" y2="0" stroke="#000000" stroke-width="0.5" />
+                <line x1="0" y1="${(-crossLen).toFixed(2)}" x2="0" y2="${crossLen.toFixed(2)}" stroke="#000000" stroke-width="0.5" />
+            </g>`;
+
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+        const offset = fromUnitToPx(7, 'mm');
+
+        extraMarks += `
+        <g id="registration_marks">
+            ${createTarget(midX, y1 - offset)}
+            ${createTarget(midX, y2 + offset)}
+            ${createTarget(x1 - offset, midY)}
+            ${createTarget(x2 + offset, midY)}
+        </g>`;
+    }
+
+    // 3. Barra de Cores de Calibração CMYK
+    if (options.colorBars) {
+        const barColors = ['#00FFFF', '#FF00FF', '#FFFF00', '#000000', '#007ACC', '#C00060', '#CC9900', '#808080'];
+        const boxSize = fromUnitToPx(3.5, 'mm');
+        const spacing = fromUnitToPx(4.2, 'mm');
+        const totalBarW = barColors.length * spacing;
+        const startX = (x1 + x2 - totalBarW) / 2;
+        const barY = y1 - fromUnitToPx(12, 'mm');
+
+        let rects = '';
+        barColors.forEach((color, i) => {
+            rects += `<rect x="${(startX + i * spacing).toFixed(2)}" y="${barY.toFixed(2)}" width="${boxSize.toFixed(2)}" height="${boxSize.toFixed(2)}" fill="${color}" stroke="#333" stroke-width="0.2" />`;
+        });
+        extraMarks += `<g id="color_bars">${rects}</g>`;
+    }
+
+    // 4. Informações do Trabalho (Job Info)
+    if (options.jobInfo) {
+        const wMm = Math.round(fromPxToUnit(docW, 'mm'));
+        const hMm = Math.round(fromPxToUnit(docH, 'mm'));
+        const now = new Date();
+        const dateStr = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        const infoText = `CorelClone Pro 2026 — Dimensões: ${wMm} x ${hMm} mm — Sangria: ${bleedMm} mm — ${dateStr}`;
+        const infoY = y2 + fromUnitToPx(11, 'mm');
+
+        extraMarks += `
+        <g id="job_info">
+            <text x="${x1.toFixed(2)}" y="${infoY.toFixed(2)}" font-family="Arial, Helvetica, sans-serif" font-size="8.5" fill="#333333">${infoText}</text>
+        </g>`;
+    }
+
+    const fullSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${sheetW.toFixed(2)}" height="${sheetH.toFixed(2)}" viewBox="0 0 ${sheetW.toFixed(2)} ${sheetH.toFixed(2)}">
+    <defs>
+        ${defsHtml}
+    </defs>
+    <rect width="${sheetW.toFixed(2)}" height="${sheetH.toFixed(2)}" fill="#ffffff" />
+    <rect x="${x1.toFixed(2)}" y="${y1.toFixed(2)}" width="${docW.toFixed(2)}" height="${docH.toFixed(2)}" fill="#ffffff" />
+    <g id="artwork" transform="translate(${x1.toFixed(2)}, ${y1.toFixed(2)})">
+        ${contentHtml}
+    </g>
+    ${extraMarks}
+</svg>`.trim();
+
+    return { svgString: fullSvg, sheetW, sheetH };
+}
+
+function executePrintExport(format) {
+    const bleedMm = parseFloat(document.getElementById('printBleedInput')?.value || 3) || 0;
+    const options = {
+        cropMarks: document.getElementById('chkCropMarks')?.checked ?? true,
+        registrationMarks: document.getElementById('chkRegistrationMarks')?.checked ?? true,
+        colorBars: document.getElementById('chkColorBars')?.checked ?? true,
+        jobInfo: document.getElementById('chkJobInfo')?.checked ?? true
+    };
+
+    const { svgString, sheetW, sheetH } = buildPrePressSvg(bleedMm, options);
+
+    if (format === 'svg') {
+        const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        downloadBlob(blob, `corel_grafica_sangria_${Date.now()}.svg`);
+        closePrintExportDialog();
+        toast('Arquivo SVG pré-impressão baixado com sucesso!', 'ok');
+        return;
+    }
+
+    if (format === 'png') {
+        const img = new Image();
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+            const scale = 3.125;
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(sheetW * scale);
+            canvas.height = Math.round(sheetH * scale);
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            URL.revokeObjectURL(url);
+
+            canvas.toBlob(blob => {
+                downloadBlob(blob, `corel_grafica_300dpi_${Date.now()}.png`);
+                closePrintExportDialog();
+                toast('Imagem gráfica 300 DPI exportada!', 'ok');
+            }, 'image/png');
+        };
+        img.src = url;
+        return;
+    }
+
+    if (format === 'print') {
+        closePrintExportDialog();
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            toast('Permita popups no navegador para abrir a janela de impressão.', 'warn');
+            return;
+        }
+
+        printWindow.document.open();
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <title>Impressão Gráfica - CorelClone Pro</title>
+                <style>
+                    @page { size: auto; margin: 0mm; }
+                    html, body {
+                        margin: 0; padding: 0; background: #ffffff;
+                        display: flex; align-items: center; justify-content: center;
+                        width: 100%; height: 100%;
+                    }
+                    svg { display: block; width: 100%; height: auto; }
+                </style>
+            </head>
+            <body>
+                ${svgString}
+                <script>
+                    window.onload = function() {
+                        setTimeout(function() {
+                            window.focus();
+                            window.print();
+                        }, 400);
+                    };
+                <\/script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        toast('Preparando impressão vetorial...', 'ok');
+    }
+}
+
 function saveProjectJSON() {
     const layerGroup = document.getElementById('layerGroupMain');
     const project = {
@@ -3485,6 +3718,9 @@ function initKeyboardShortcuts() {
             } else if (e.key === 'q' || e.key === 'Q') {
                 e.preventDefault();
                 convertSelectedToCurves();
+            } else if (e.key === 'p' || e.key === 'P') {
+                e.preventDefault();
+                openPrintExportDialog();
             }
             return;
         }
