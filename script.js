@@ -559,12 +559,31 @@ function initCanvasEvents() {
         // 3. Node Edit Tool (F10)
         if (state.activeTool === 'node') {
             const target = e.target;
+
+            // Clicou num handle de nó existente — o evento já é tratado no renderNodeEditOverlay
+            if (target.closest && target.closest('#nodeEditOverlay')) return;
+
+            // Clicou num elemento da prancheta — entra no modo de edição
             if (target && target.closest('#layerGroupMain')) {
                 const el = target.closest('#layerGroupMain > *');
-                if (el) {
-                    selectElement(el, false);
+                if (el && !INTERNAL_LAYER_IDS.has(el.getAttribute('id') || '')) {
+                    // Seleciona o elemento
+                    state.selectedElements = [el];
+                    renderSelectionOverlay();
+                    // Entra no modo nó
                     enterNodeEditingForSelected();
+                    updatePropertyBar();
+                    return;
                 }
+            }
+
+            // Clicou no vazio — sai do modo nó
+            if (state.nodeEdit.activePath) {
+                state.nodeEdit.activePath = null;
+                state.nodeEdit.nodes = [];
+                state.nodeEdit.activeNodeIndex = -1;
+                const overlay = document.getElementById('nodeEditOverlay');
+                if (overlay) overlay.innerHTML = '';
             }
             return;
         }
@@ -780,15 +799,23 @@ function initCanvasEvents() {
                 state.currentElement.setAttribute('cy', (y + ry).toString());
                 state.currentElement.setAttribute('rx', Math.max(rx, 1).toString());
                 state.currentElement.setAttribute('ry', Math.max(ry, 1).toString());
-            } else if (state.activeTool === 'brush' || state.activeTool === 'pen') {
-                const d = state.currentElement.getAttribute('d');
+            } else if (state.activeTool === 'brush') {
+                const d = state.currentElement.getAttribute('d') || '';
                 state.currentElement.setAttribute('d', `${d} L ${pt.x} ${pt.y}`);
             } else if (state.activeTool === 'star') {
                 const radius = Math.max(w, h) / 2;
                 state.currentElement.setAttribute('points', generateStarPoints(x + radius, y + radius, 5, radius, radius * 0.45));
+            } else if (state.activeTool === 'crop') {
+                // Atualiza preview do recorte
+                state.currentElement.setAttribute('x', x.toString());
+                state.currentElement.setAttribute('y', y.toString());
+                state.currentElement.setAttribute('width', Math.max(w, 1).toString());
+                state.currentElement.setAttribute('height', Math.max(h, 1).toString());
             }
         }
     });
+
+
 
     // Mouse Up
     window.addEventListener('mouseup', (e) => {
@@ -805,41 +832,52 @@ function initCanvasEvents() {
         }
 
         if (state.isDrawing && state.currentElement) {
-            // ---- Ferramenta Crop: aplica clipping aos objetos selecionados ----
+            // ---- Ferramenta Crop: aplica clipping na região arrastada ----
             if (state.activeTool === 'crop') {
-                const cropEl = state.currentElement; // o _cropPreview rect
-                const cx = parseFloat(cropEl.getAttribute('x'));
-                const cy = parseFloat(cropEl.getAttribute('y'));
-                const cw = parseFloat(cropEl.getAttribute('width'));
-                const ch = parseFloat(cropEl.getAttribute('height'));
-                cropEl.remove(); // remove o preview visual
+                const cropEl = state.currentElement;
+                // Ler antes de remover
+                const cx = parseFloat(cropEl.getAttribute('x') || '0');
+                const cy = parseFloat(cropEl.getAttribute('y') || '0');
+                const cw = parseFloat(cropEl.getAttribute('width') || '0');
+                const ch = parseFloat(cropEl.getAttribute('height') || '0');
+                cropEl.remove();
 
-                // Define um clipPath SVG e aplica a cada objeto selecionado
-                if (state.selectedElements.length > 0 && cw > 5 && ch > 5) {
-                    const mainSvg = document.getElementById('mainSvgCanvas');
-                    const defs = mainSvg.querySelector('defs') || (() => {
-                        const d = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-                        mainSvg.prepend(d);
-                        return d;
-                    })();
+                if (cw > 5 && ch > 5) {
+                    // Detecta automaticamente todos os objetos reais na prancheta
+                    const layerGroup = document.getElementById('layerGroupMain');
+                    const candidates = state.selectedElements.length > 0
+                        ? state.selectedElements
+                        : Array.from(layerGroup ? layerGroup.children : []).filter(el => {
+                            const id = el.getAttribute('id') || '';
+                            return !INTERNAL_LAYER_IDS.has(id);
+                        });
 
-                    const clipId = `clip_${Date.now()}`;
-                    const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
-                    clipPath.setAttribute('id', clipId);
-                    const clipRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                    clipRect.setAttribute('x', cx.toString());
-                    clipRect.setAttribute('y', cy.toString());
-                    clipRect.setAttribute('width', cw.toString());
-                    clipRect.setAttribute('height', ch.toString());
-                    clipPath.appendChild(clipRect);
-                    defs.appendChild(clipPath);
+                    if (candidates.length === 0) {
+                        toast('Selecione objetos ou desenhe sobre eles com a ferramenta Cortar.', 'err');
+                    } else {
+                        const mainSvg = document.getElementById('mainSvgCanvas');
+                        let defs = mainSvg.querySelector('defs');
+                        if (!defs) {
+                            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                            mainSvg.prepend(defs);
+                        }
 
-                    state.selectedElements.forEach(el => {
-                        el.setAttribute('clip-path', `url(#${clipId})`);
-                    });
-                    saveState('Cortar Região');
-                    toast('Recorte aplicado aos objetos selecionados!', 'ok');
-                } else if (cw <= 5 || ch <= 5) {
+                        const clipId = `clip_${Date.now()}`;
+                        const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+                        clipPath.setAttribute('id', clipId);
+                        const clipRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        clipRect.setAttribute('x', cx.toString());
+                        clipRect.setAttribute('y', cy.toString());
+                        clipRect.setAttribute('width', cw.toString());
+                        clipRect.setAttribute('height', ch.toString());
+                        clipPath.appendChild(clipRect);
+                        defs.appendChild(clipPath);
+
+                        candidates.forEach(el => el.setAttribute('clip-path', `url(#${clipId})`));
+                        saveState('Cortar Região');
+                        toast(`Recorte aplicado em ${candidates.length} objeto(s)!`, 'ok');
+                    }
+                } else {
                     toast('Arraste para definir a área de recorte.', 'err');
                 }
 
@@ -848,6 +886,7 @@ function initCanvasEvents() {
                 selectTool('select');
                 return;
             }
+
 
             // ---- Outras ferramentas de desenho ----
             const el = state.currentElement;
@@ -2680,9 +2719,36 @@ function renderNodeEditOverlay() {
         sq.style.cursor = 'move';
         sq.addEventListener('mousedown', (e) => {
             e.stopPropagation();
+            e.preventDefault();
             state.nodeEdit.activeNodeIndex = idx;
             renderNodeEditOverlay();
+
+            // Inicia arrastar nó
+            const mainSvg = document.getElementById('mainSvgCanvas');
+            const onMove = (me) => {
+                if (!mainSvg) return;
+                const pt = mainSvg.createSVGPoint();
+                pt.x = me.clientX;
+                pt.y = me.clientY;
+                const svgPt = pt.matrixTransform(mainSvg.getScreenCTM().inverse());
+                const node = state.nodeEdit.nodes[idx];
+                if (node) {
+                    node.x = Math.round(svgPt.x);
+                    node.y = Math.round(svgPt.y);
+                    // Atualiza o path em tempo real
+                    state.nodeEdit.activePath.setAttribute('d', rebuildSvgPathFromNodes(state.nodeEdit.nodes));
+                    renderNodeEditOverlay();
+                }
+            };
+            const onUp = () => {
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+                saveState('Mover Nó');
+            };
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
         });
+
         overlay.appendChild(sq);
 
         // Linhas de controle para nós Bézier (tipo C)
