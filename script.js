@@ -1550,6 +1550,9 @@ function newDocument() {
         if (layerGroup) layerGroup.innerHTML = '';
         state.history = [];
         state.historyIndex = -1;
+        state.cdrPages = [];
+        state.activePageIndex = -1;
+        renderPageTabBar();
         deselectAll();
         saveState('Novo Documento');
         fitToScreen();
@@ -1616,6 +1619,9 @@ async function handleImportFile(file) {
         }
 
         if (convertedSvg) {
+            state.cdrPages = [];
+            state.activePageIndex = -1;
+            renderPageTabBar();
             importSVGContent(convertedSvg);
             toast(`⚡ Arquivo .${ext.toUpperCase()} aberto com 100% de PRECISÃO VETORIAL NATIVA!`, 'ok');
             return;
@@ -1628,12 +1634,21 @@ async function handleImportFile(file) {
             await parseCDRFile(file);
         }
     } else if (ext === 'svg') {
+        state.cdrPages = [];
+        state.activePageIndex = -1;
+        renderPageTabBar();
         const text = await file.text();
         importSVGContent(text);
     } else if (ext === 'json') {
+        state.cdrPages = [];
+        state.activePageIndex = -1;
+        renderPageTabBar();
         const text = await file.text();
         importJSONProject(text);
     } else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+        state.cdrPages = [];
+        state.activePageIndex = -1;
+        renderPageTabBar();
         const url = URL.createObjectURL(file);
         importImageURL(url);
     } else {
@@ -1659,6 +1674,7 @@ async function parsePDFFile(file) {
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
         state.cdrPages = [];
+        state.activePageIndex = -1;
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const viewport = page.getViewport({ scale: 2.0 });
@@ -1667,7 +1683,7 @@ async function parsePDFFile(file) {
             canvas.height = viewport.height;
             const ctx = canvas.getContext('2d');
             await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-            state.cdrPages.push({ id: i - 1, name: `Pág. ${i}`, url: canvas.toDataURL('image/png') });
+            state.cdrPages.push({ id: i - 1, name: `Página ${i}`, url: canvas.toDataURL('image/png'), svgContent: null });
         }
 
         renderPageTabBar();
@@ -1697,16 +1713,24 @@ async function parseCDRFile(file) {
 
         pageEntries.sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }));
 
-        if (pageEntries.length > 0) {
+        // Se existirem páginas específicas (ex: page1.png, page2.png), filtrar para não duplicar com thumbnail geral
+        let filteredEntries = pageEntries;
+        const pageSpecific = pageEntries.filter(p => p.path.match(/page\d+/i) || p.path.match(/page[_\-]\d+/i));
+        if (pageSpecific.length > 0) {
+            filteredEntries = pageSpecific;
+        }
+
+        if (filteredEntries.length > 0) {
             state.cdrPages = [];
-            for (let i = 0; i < pageEntries.length; i++) {
-                const blob = await pageEntries[i].entry.async("blob");
+            state.activePageIndex = -1;
+            for (let i = 0; i < filteredEntries.length; i++) {
+                const blob = await filteredEntries[i].entry.async("blob");
                 const url = URL.createObjectURL(blob);
-                state.cdrPages.push({ id: i, name: `Página ${i + 1}`, url: url });
+                state.cdrPages.push({ id: i, name: `Página ${i + 1}`, url: url, svgContent: null });
             }
             renderPageTabBar();
             switchCDRPage(0);
-            toast(`Aviso: Visualização rápida do CDR. Para 100% de qualidade vetorial pura, use o app local: http://127.0.0.1:54321`, 'err');
+            toast(`Arquivo .CDR com ${filteredEntries.length} página(s) aberto!`, 'ok');
             setTimeout(() => {
                 if (confirm('Arquivo CorelDRAW (.CDR) carregado!\n\n💡 Dica de Qualidade:\n• Para 100% de precisão vetorial nativa instantânea, use o CorelClone Desktop Local (http://127.0.0.1:54321).\n\nDeseja vetorizar agora com o PowerTRACE™ Suavizado?')) {
                     openPowerTraceDialog();
@@ -1733,36 +1757,149 @@ function renderPageTabBar() {
         <button type="button" class="page-tab-item ${state.activePageIndex === idx ? 'active' : ''}" onclick="switchCDRPage(${idx})">
             <i class="fas fa-file-alt"></i> ${page.name}
         </button>
-    `).join('');
+    `).join('') + `
+        <button type="button" class="page-tab-item page-tab-add" onclick="addNewPage()" title="Adicionar Nova Página">
+            <i class="fas fa-plus"></i>
+        </button>
+    `;
 }
 
 function switchCDRPage(index) {
     if (!state.cdrPages || !state.cdrPages[index]) return;
+    const layerGroup = document.getElementById('layerGroupMain');
+    if (!layerGroup) return;
+
+    // 1. Salvar conteúdo e dimensões da página anterior antes da troca
+    if (state.activePageIndex >= 0 && state.activePageIndex !== index && state.cdrPages[state.activePageIndex]) {
+        state.cdrPages[state.activePageIndex].svgContent = layerGroup.innerHTML;
+        state.cdrPages[state.activePageIndex].docWidth = state.docWidth;
+        state.cdrPages[state.activePageIndex].docHeight = state.docHeight;
+    }
+
+    // 2. Desmarcar todos os elementos para não sobrar caixas de seleção da página anterior
+    deselectAll();
+
+    // 3. Atualizar índice ativo e barra de abas
     state.activePageIndex = index;
-    const page = state.cdrPages[index];
-    importImageURL(page.url);
     renderPageTabBar();
+
+    const targetPage = state.cdrPages[index];
+
+    // 4. Se a página já foi visitada e possui conteúdo salvo, restaurar com exclusividade!
+    if (targetPage.svgContent !== undefined && targetPage.svgContent !== null) {
+        layerGroup.innerHTML = targetPage.svgContent;
+        if (targetPage.docWidth && targetPage.docHeight) {
+            state.docWidth = targetPage.docWidth;
+            state.docHeight = targetPage.docHeight;
+            applyDocDimensions();
+        }
+        updateLayersTree();
+        updatePropertyBarVisibility();
+        saveState(`Mudar para ${targetPage.name}`);
+        toast(`Exibindo ${targetPage.name}`, 'ok');
+        return;
+    }
+
+    // 5. Primeira vez abrindo esta página: Limpar prancheta e carregar somente o conteúdo desta aba!
+    layerGroup.innerHTML = '';
+
+    if (targetPage.svgText) {
+        importSVGContent(targetPage.svgText, true);
+    } else if (targetPage.url) {
+        loadPageImage(targetPage.url, targetPage.name);
+    }
+}
+
+function loadPageImage(url, pageName) {
+    const tempImg = new Image();
+    tempImg.onload = () => {
+        const layerGroup = document.getElementById('layerGroupMain');
+        if (!layerGroup) return;
+        layerGroup.innerHTML = ''; // Garante prancheta 100% limpa para a página atual
+
+        let imgW = tempImg.naturalWidth || 800;
+        let imgH = tempImg.naturalHeight || 600;
+
+        let targetW = imgW;
+        let targetH = imgH;
+        if (targetW > state.docWidth * 0.95 || targetH > state.docHeight * 0.95) {
+            const fitScale = Math.min((state.docWidth * 0.85) / targetW, (state.docHeight * 0.85) / targetH);
+            targetW = Math.round(targetW * fitScale);
+            targetH = Math.round(targetH * fitScale);
+        }
+
+        const posX = Math.round((state.docWidth - targetW) / 2);
+        const posY = Math.round((state.docHeight - targetH) / 2);
+
+        const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        img.setAttribute('href', url);
+        img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        img.setAttribute('x', posX.toString());
+        img.setAttribute('y', posY.toString());
+        img.setAttribute('width', targetW.toString());
+        img.setAttribute('height', targetH.toString());
+
+        layerGroup.appendChild(img);
+        selectElement(img, false);
+        updateLayersTree();
+        updatePropertyBarVisibility();
+        saveState(`Carregar ${pageName || 'Página'}`);
+        toast(`${pageName || 'Página'} carregada com sucesso!`, 'ok');
+    };
+    tempImg.src = url;
+}
+
+function addNewPage() {
+    const layerGroup = document.getElementById('layerGroupMain');
+    if (state.activePageIndex >= 0 && state.cdrPages[state.activePageIndex] && layerGroup) {
+        state.cdrPages[state.activePageIndex].svgContent = layerGroup.innerHTML;
+    }
+    const newIdx = state.cdrPages.length;
+    state.cdrPages.push({
+        id: newIdx,
+        name: `Página ${newIdx + 1}`,
+        svgContent: '',
+        docWidth: state.docWidth,
+        docHeight: state.docHeight
+    });
+    switchCDRPage(newIdx);
+    toast(`Página ${newIdx + 1} criada!`, 'ok');
 }
 
 function importImageURL(url) {
     const tempImg = new Image();
     tempImg.onload = () => {
         const layerGroup = document.getElementById('layerGroupMain');
+        if (!layerGroup) return;
+
+        let imgW = tempImg.naturalWidth || 800;
+        let imgH = tempImg.naturalHeight || 600;
+
+        let targetW = imgW;
+        let targetH = imgH;
+        if (targetW > state.docWidth * 0.95 || targetH > state.docHeight * 0.95) {
+            const fitScale = Math.min((state.docWidth * 0.85) / targetW, (state.docHeight * 0.85) / targetH);
+            targetW = Math.round(targetW * fitScale);
+            targetH = Math.round(targetH * fitScale);
+        }
+
+        const posX = Math.round((state.docWidth - targetW) / 2);
+        const posY = Math.round((state.docHeight - targetH) / 2);
+
         const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
         img.setAttribute('href', url);
         img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-
-        let w = tempImg.naturalWidth || 800;
-        let h = tempImg.naturalHeight || 600;
-
-        img.setAttribute('x', '0');
-        img.setAttribute('y', '0');
-        img.setAttribute('width', w.toString());
-        img.setAttribute('height', h.toString());
+        img.setAttribute('x', posX.toString());
+        img.setAttribute('y', posY.toString());
+        img.setAttribute('width', targetW.toString());
+        img.setAttribute('height', targetH.toString());
 
         layerGroup.appendChild(img);
         selectElement(img, false);
+        updateLayersTree();
+        updatePropertyBarVisibility();
         saveState('Importar Imagem');
+        toast('Imagem inserida na prancheta!', 'ok');
     };
     tempImg.src = url;
 }
@@ -2995,4 +3132,5 @@ window.renderGuidelines = renderGuidelines;
 window.toggleElementVisibility = toggleElementVisibility;
 window.toggleImportedBgImage = toggleImportedBgImage;
 window.ungroupAll = ungroupAll;
+window.addNewPage = addNewPage;
 
