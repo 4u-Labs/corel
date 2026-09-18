@@ -4457,26 +4457,35 @@ function openDownloadDesktopModal() {
     if (cardMac) cardMac.style.boxShadow = 'none';
     if (cardLinux) cardLinux.style.boxShadow = 'none';
 
+    const isPt = (!window.corelI18n || window.corelI18n.currentLang === 'pt');
     if (os === 'windows') {
-        if (badge) badge.innerHTML = '<i class="fab fa-windows text-sky-600"></i> Seu sistema: Windows 10/11';
+        if (badge) badge.innerHTML = isPt
+            ? '<i class="fab fa-windows text-sky-600"></i> Seu sistema: Windows 10/11'
+            : '<i class="fab fa-windows text-sky-600"></i> Your OS: Windows 10/11';
         if (cardWin) {
             cardWin.style.borderColor = '#0284c7';
             cardWin.style.boxShadow = '0 0 0 2px #38bdf8';
         }
     } else if (os === 'mac') {
-        if (badge) badge.innerHTML = '<i class="fab fa-apple text-slate-800"></i> Seu sistema: Apple macOS';
+        if (badge) badge.innerHTML = isPt
+            ? '<i class="fab fa-apple text-slate-800"></i> Seu sistema: Apple macOS'
+            : '<i class="fab fa-apple text-slate-800"></i> Your OS: Apple macOS';
         if (cardMac) {
             cardMac.style.borderColor = '#1e293b';
             cardMac.style.boxShadow = '0 0 0 2px #94a3b8';
         }
     } else if (os === 'linux') {
-        if (badge) badge.innerHTML = '<i class="fab fa-linux text-amber-600"></i> Seu sistema: Linux (Zorin/Ubuntu)';
+        if (badge) badge.innerHTML = isPt
+            ? '<i class="fab fa-linux text-amber-600"></i> Seu sistema: Linux (Zorin/Ubuntu)'
+            : '<i class="fab fa-linux text-amber-600"></i> Your OS: Linux (Zorin/Ubuntu)';
         if (cardLinux) {
             cardLinux.style.borderColor = '#d97706';
             cardLinux.style.boxShadow = '0 0 0 2px #fbbf24';
         }
     } else {
-        if (badge) badge.innerHTML = '<i class="fas fa-laptop"></i> Escolha seu sistema abaixo';
+        if (badge) badge.innerHTML = isPt
+            ? '<i class="fas fa-laptop"></i> Escolha seu sistema abaixo'
+            : '<i class="fas fa-laptop"></i> Choose your system below';
     }
 
     modal.style.display = 'flex';
