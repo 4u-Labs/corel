@@ -58,9 +58,13 @@ $baseDir = './';
                 <span class="window-title-text" id="windowTitleText">CorelClone Pro 2026 (64-Bit) — [Documento 1] @ 100%</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-                <button type="button" class="btn-download-desktop" onclick="openDownloadDesktopModal()" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, #059669, #047857); color:#fff; border:none; border-radius:4px; padding:3px 10px; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.2);" title="Baixar aplicativo para Computador (Windows, Mac ou Linux)">
-                    <i class="fas fa-download"></i> <span>Baixar App</span>
+                <button type="button" class="btn-download-desktop" onclick="openDownloadDesktopModal()" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, #059669, #047857); color:#fff; border:none; border-radius:4px; padding:3px 10px; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.2);" data-i18n-title="btn_download_app_title" title="Baixar aplicativo para Computador (Windows, Mac ou Linux)">
+                    <i class="fas fa-download"></i> <span data-i18n="btn_download_app">Baixar App</span>
                 </button>
+                <div class="lang-switch-box" id="langSwitchBox" title="Mudar Idioma / Switch Language">
+                    <button type="button" class="lang-btn active" id="btnLangPT" data-lang="pt" onclick="setLanguage('pt')">PT</button>
+                    <button type="button" class="lang-btn" id="btnLangEN" data-lang="en" onclick="setLanguage('en')">EN</button>
+                </div>
                 <div class="window-title-controls">
                     <button type="button" class="btn-win-ctl" title="Minimizar"><i class="fas fa-minus"></i></button>
                     <button type="button" class="btn-win-ctl" title="Maximizar"><i class="far fa-square"></i></button>
@@ -73,117 +77,121 @@ $baseDir = './';
         <nav class="menu-bar">
             <!-- Arquivo -->
             <div class="menu-item">
-                <button type="button" class="menu-btn">Arquivo</button>
+                <button type="button" class="menu-btn" data-i18n="menu_file">Arquivo</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="newDocument()"><i class="fas fa-file"></i> Novo <span class="shortcut">Ctrl+N</span></button>
-                    <button type="button" class="dropdown-item" onclick="document.getElementById('importFileInput').click()"><i class="fas fa-folder-open text-emerald-600"></i> Abrir .CDR / .PDF / SVG... <span class="shortcut">Ctrl+O</span></button>
-                    <button type="button" class="dropdown-item" onclick="saveProjectJSON()"><i class="fas fa-save"></i> Salvar Projeto <span class="shortcut">Ctrl+S</span></button>
+                    <button type="button" class="dropdown-item" onclick="newDocument()"><i class="fas fa-file"></i> <span data-i18n="menu_new">Novo</span> <span class="shortcut">Ctrl+N</span></button>
+                    <button type="button" class="dropdown-item" onclick="document.getElementById('importFileInput').click()"><i class="fas fa-folder-open text-emerald-600"></i> <span data-i18n="menu_open">Abrir .CDR / .PDF / SVG...</span> <span class="shortcut">Ctrl+O</span></button>
+                    <button type="button" class="dropdown-item" onclick="saveProjectJSON()"><i class="fas fa-save"></i> <span data-i18n="menu_save_svg">Salvar Projeto</span> <span class="shortcut">Ctrl+S</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="exportDocument('svg')"><i class="fas fa-file-code"></i> Exportar como SVG...</button>
-                    <button type="button" class="dropdown-item" onclick="exportDocument('pdf')"><i class="fas fa-file-pdf"></i> Exportar como PDF...</button>
-                    <button type="button" class="dropdown-item" onclick="exportDocument('png')"><i class="fas fa-file-image"></i> Exportar como PNG HD...</button>
+                    <button type="button" class="dropdown-item" onclick="exportDocument('svg')"><i class="fas fa-file-code"></i> <span data-i18n="act_exp_svg">Exportar como SVG...</span></button>
+                    <button type="button" class="dropdown-item" onclick="exportDocument('pdf')"><i class="fas fa-file-pdf"></i> <span data-i18n="act_exp_pdf">Exportar como PDF...</span></button>
+                    <button type="button" class="dropdown-item" onclick="exportDocument('png')"><i class="fas fa-file-image"></i> <span data-i18n="act_exp_png">Exportar como PNG HD...</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="openPrintExportDialog()"><i class="fas fa-print text-red-600"></i> Preparar para Impressão / Gráfica... <span class="shortcut">Ctrl+P</span></button>
-                    <button type="button" class="dropdown-item" onclick="openLocalBridgeApp()"><i class="fas fa-desktop text-cyan-600"></i> Abrir no App Local (100% CDR)...</button>
+                    <button type="button" class="dropdown-item" onclick="openPrintExportDialog()"><i class="fas fa-print text-red-600"></i> <span data-i18n="menu_prepress">Preparar para Impressão / Gráfica...</span> <span class="shortcut">Ctrl+P</span></button>
+                    <button type="button" class="dropdown-item" onclick="openLocalBridgeApp()"><i class="fas fa-desktop text-cyan-600"></i> <span data-i18n="menu_open_cdr">Abrir no App Local (100% CDR)...</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="openDownloadDesktopModal()"><i class="fas fa-download text-emerald-600"></i> Baixar para Computador (Win / Mac / Linux)...</button>
+                    <button type="button" class="dropdown-item" onclick="openDownloadDesktopModal()"><i class="fas fa-download text-emerald-600"></i> <span data-i18n="menu_download_desktop">Baixar para Computador (Win / Mac / Linux)...</span></button>
                 </div>
             </div>
 
             <!-- Editar -->
             <div class="menu-item">
-                <button type="button" class="menu-btn">Editar</button>
+                <button type="button" class="menu-btn" data-i18n="menu_edit">Editar</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="undo()"><i class="fas fa-undo"></i> Desfazer <span class="shortcut">Ctrl+Z</span></button>
-                    <button type="button" class="dropdown-item" onclick="redo()"><i class="fas fa-redo"></i> Refazer <span class="shortcut">Ctrl+Y</span></button>
+                    <button type="button" class="dropdown-item" onclick="undo()"><i class="fas fa-undo"></i> <span data-i18n="menu_undo">Desfazer</span> <span class="shortcut">Ctrl+Z</span></button>
+                    <button type="button" class="dropdown-item" onclick="redo()"><i class="fas fa-redo"></i> <span data-i18n="menu_redo">Refazer</span> <span class="shortcut">Ctrl+Y</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="duplicateSelected()"><i class="fas fa-clone"></i> Duplicar <span class="shortcut">Ctrl+D</span></button>
-                    <button type="button" class="dropdown-item" onclick="repeatTransform()"><i class="fas fa-redo text-amber-500"></i> Repetir / Duplicar com Passo <span class="shortcut">Ctrl+R</span></button>
-                    <button type="button" class="dropdown-item" onclick="deleteSelected()"><i class="fas fa-trash"></i> Excluir <span class="shortcut">Delete</span></button>
-                    <button type="button" class="dropdown-item" onclick="selectAll()"><i class="fas fa-object-group"></i> Selecionar Tudo <span class="shortcut">Ctrl+A</span></button>
+                    <button type="button" class="dropdown-item" onclick="duplicateSelected()"><i class="fas fa-clone"></i> <span data-i18n="menu_duplicate">Duplicar</span> <span class="shortcut">Ctrl+D</span></button>
+                    <button type="button" class="dropdown-item" onclick="repeatTransform()"><i class="fas fa-redo text-amber-500"></i> <span data-i18n="menu_repeat">Repetir / Duplicar com Passo</span> <span class="shortcut">Ctrl+R</span></button>
+                    <button type="button" class="dropdown-item" onclick="deleteSelected()"><i class="fas fa-trash"></i> <span data-i18n="menu_delete">Excluir</span> <span class="shortcut">Delete</span></button>
+                    <button type="button" class="dropdown-item" onclick="selectAll()"><i class="fas fa-object-group"></i> <span data-i18n="menu_select_all">Selecionar Tudo</span> <span class="shortcut">Ctrl+A</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="openFountainFillDialog()"><i class="fas fa-fill text-purple-600"></i> Preenchimento Gradiente... <span class="shortcut">F11</span></button>
+                    <button type="button" class="dropdown-item" onclick="openFountainFillDialog()"><i class="fas fa-fill text-purple-600"></i> <span data-i18n="fountain_modal_title">Preenchimento Gradiente...</span> <span class="shortcut">F11</span></button>
                 </div>
             </div>
 
             <!-- Exibir -->
             <div class="menu-item">
-                <button type="button" class="menu-btn">Exibir</button>
+                <button type="button" class="menu-btn" data-i18n="menu_view">Exibir</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="setZoom(1.0)"><i class="fas fa-search"></i> Tamanho Real (100%)</button>
-                    <button type="button" class="dropdown-item" onclick="zoomFitPage()"><i class="fas fa-expand"></i> Ajustar à Página <span class="shortcut">F4</span></button>
+                    <button type="button" class="dropdown-item" onclick="setZoom(1.0)"><i class="fas fa-search"></i> <span data-i18n="menu_zoom_100">Tamanho Real (100%)</span></button>
+                    <button type="button" class="dropdown-item" onclick="zoomFitPage()"><i class="fas fa-expand"></i> <span data-i18n="menu_zoom_page">Ajustar à Página</span> <span class="shortcut">F4</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="toggleRulers()"><i class="fas fa-ruler"></i> Mostrar Réguas</button>
-                    <button type="button" class="dropdown-item" onclick="toggleGuidelines()"><i class="fas fa-border-all"></i> Mostrar Linhas-Guia</button>
+                    <button type="button" class="dropdown-item" onclick="toggleRulers()"><i class="fas fa-ruler"></i> <span data-i18n="menu_rulers">Mostrar Réguas</span></button>
+                    <button type="button" class="dropdown-item" onclick="toggleGuidelines()"><i class="fas fa-border-all"></i> <span data-i18n="menu_guidelines">Mostrar Linhas-Guia</span></button>
                 </div>
             </div>
 
             <!-- Objeto -->
             <div class="menu-item">
-                <button type="button" class="menu-btn">Objeto</button>
+                <button type="button" class="menu-btn" data-i18n="menu_object">Objeto</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="groupSelected()"><i class="fas fa-object-group"></i> Agrupar <span class="shortcut">Ctrl+G</span></button>
-                    <button type="button" class="dropdown-item" onclick="ungroupSelected()"><i class="fas fa-object-ungroup"></i> Desagrupar <span class="shortcut">Ctrl+U</span></button>
+                    <button type="button" class="dropdown-item" onclick="groupSelected()"><i class="fas fa-object-group"></i> <span data-i18n="menu_group">Agrupar</span> <span class="shortcut">Ctrl+G</span></button>
+                    <button type="button" class="dropdown-item" onclick="ungroupSelected()"><i class="fas fa-object-ungroup"></i> <span data-i18n="menu_ungroup">Desagrupar</span> <span class="shortcut">Ctrl+U</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="convertSelectedToCurves()"><i class="fas fa-bezier-curve"></i> Converter em Curvas <span class="shortcut">Ctrl+Q</span></button>
+                    <button type="button" class="dropdown-item" onclick="convertSelectedToCurves()"><i class="fas fa-bezier-curve"></i> <span data-i18n="layer_bezier_curve">Converter em Curvas</span> <span class="shortcut">Ctrl+Q</span></button>
                     <div class="dropdown-separator"></div>
                     <!-- CorelDRAW Align & Distribute -->
-                    <button type="button" class="dropdown-item" onclick="alignSelected('P')"><i class="fas fa-crosshairs text-blue-600"></i> Centralizar na Página <span class="shortcut">P</span></button>
-                    <button type="button" class="dropdown-item" onclick="alignSelected('C')"><i class="fas fa-arrows-alt-h text-cyan-600"></i> Centralizar Horizontal <span class="shortcut">C</span></button>
-                    <button type="button" class="dropdown-item" onclick="alignSelected('E')"><i class="fas fa-arrows-alt-v text-cyan-600"></i> Centralizar Vertical <span class="shortcut">E</span></button>
-                    <button type="button" class="dropdown-item" onclick="alignSelected('L')"><i class="fas fa-align-left"></i> Alinhar à Esquerda <span class="shortcut">L</span></button>
-                    <button type="button" class="dropdown-item" onclick="alignSelected('R')"><i class="fas fa-align-right"></i> Alinhar à Direita <span class="shortcut">R</span></button>
-                    <button type="button" class="dropdown-item" onclick="alignSelected('T')"><i class="fas fa-arrow-up"></i> Alinhar pelo Topo <span class="shortcut">T</span></button>
-                    <button type="button" class="dropdown-item" onclick="alignSelected('B')"><i class="fas fa-arrow-down"></i> Alinhar pela Base <span class="shortcut">B</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('P')"><i class="fas fa-crosshairs text-blue-600"></i> <span data-i18n="menu_align_page">Centralizar na Página</span> <span class="shortcut">P</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('C')"><i class="fas fa-arrows-alt-h text-cyan-600"></i> <span data-i18n="menu_align_center_h">Centralizar Horizontal</span> <span class="shortcut">C</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('E')"><i class="fas fa-arrows-alt-v text-cyan-600"></i> <span data-i18n="menu_align_center_v">Centralizar Vertical</span> <span class="shortcut">E</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('L')"><i class="fas fa-align-left"></i> <span data-i18n="menu_align_left">Alinhar à Esquerda</span> <span class="shortcut">L</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('R')"><i class="fas fa-align-right"></i> <span data-i18n="menu_align_right">Alinhar à Direita</span> <span class="shortcut">R</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('T')"><i class="fas fa-arrow-up"></i> <span data-i18n="menu_align_top">Alinhar pelo Topo</span> <span class="shortcut">T</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('B')"><i class="fas fa-arrow-down"></i> <span data-i18n="menu_align_bottom">Alinhar pela Base</span> <span class="shortcut">B</span></button>
                     <div class="dropdown-separator"></div>
                     <!-- CorelDRAW Espelhar / Flip -->
-                    <button type="button" class="dropdown-item" onclick="flipSelected('horizontal')"><i class="fas fa-arrows-alt-h text-indigo-600"></i> Espelhar Horizontalmente</button>
-                    <button type="button" class="dropdown-item" onclick="flipSelected('vertical')"><i class="fas fa-arrows-alt-v text-indigo-600"></i> Espelhar Verticalmente</button>
+                    <button type="button" class="dropdown-item" onclick="flipSelected('horizontal')"><i class="fas fa-arrows-alt-h text-indigo-600"></i> <span data-i18n="menu_flip_h">Espelhar Horizontalmente</span></button>
+                    <button type="button" class="dropdown-item" onclick="flipSelected('vertical')"><i class="fas fa-arrows-alt-v text-indigo-600"></i> <span data-i18n="menu_flip_v">Espelhar Verticalmente</span></button>
                     <div class="dropdown-separator"></div>
                     <!-- PowerClip CorelDRAW -->
-                    <button type="button" class="dropdown-item" onclick="applyPowerClip()"><i class="fas fa-sign-in-alt text-amber-600"></i> PowerClip: Colocar no Recipiente...</button>
-                    <button type="button" class="dropdown-item" onclick="extractPowerClip()"><i class="fas fa-sign-out-alt text-amber-600"></i> PowerClip: Extrair Conteúdo</button>
+                    <button type="button" class="dropdown-item" onclick="applyPowerClip()"><i class="fas fa-sign-in-alt text-amber-600"></i> <span data-i18n="menu_pc_place">PowerClip: Colocar no Recipiente...</span></button>
+                    <button type="button" class="dropdown-item" onclick="extractPowerClip()"><i class="fas fa-sign-out-alt text-amber-600"></i> <span data-i18n="menu_pc_extract">PowerClip: Extrair Conteúdo</span></button>
                     <div class="dropdown-separator"></div>
                     <!-- CorelDRAW QR Code -->
-                    <button type="button" class="dropdown-item" onclick="openQrCodeDialog()"><i class="fas fa-qrcode text-emerald-600"></i> Inserir Código QR Code...</button>
+                    <button type="button" class="dropdown-item" onclick="openQrCodeDialog()"><i class="fas fa-qrcode text-emerald-600"></i> <span data-i18n="qr_modal_title">Inserir Código QR Code...</span></button>
                     <div class="dropdown-separator"></div>
                     <!-- CorelDRAW Text on Path -->
-                    <button type="button" class="dropdown-item" onclick="fitTextToPath()"><i class="fas fa-italic text-sky-600"></i> Ajustar Texto ao Caminho...</button>
-                    <button type="button" class="dropdown-item" onclick="separateTextFromPath()"><i class="fas fa-unlink text-sky-600"></i> Separar Texto do Caminho</button>
+                    <button type="button" class="dropdown-item" onclick="fitTextToPath()"><i class="fas fa-italic text-sky-600"></i> <span data-i18n="menu_text_path">Ajustar Texto ao Caminho...</span></button>
+                    <button type="button" class="dropdown-item" onclick="separateTextFromPath()"><i class="fas fa-unlink text-sky-600"></i> <span data-i18n="prop_sep_path_btn">Separar Texto do Caminho</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="orderSelected('front')"><i class="fas fa-angle-double-up"></i> Trazer para Frente <span class="shortcut">Shift+PgUp</span></button>
-                    <button type="button" class="dropdown-item" onclick="orderSelected('back')"><i class="fas fa-angle-double-down"></i> Enviar para Trás <span class="shortcut">Shift+PgDn</span></button>
+                    <button type="button" class="dropdown-item" onclick="orderSelected('front')"><i class="fas fa-angle-double-up"></i> <span data-i18n="menu_bring_front">Trazer para Frente</span> <span class="shortcut">Shift+PgUp</span></button>
+                    <button type="button" class="dropdown-item" onclick="orderSelected('back')"><i class="fas fa-angle-double-down"></i> <span data-i18n="menu_send_back">Enviar para Trás</span> <span class="shortcut">Shift+PgDn</span></button>
                 </div>
             </div>
 
             <!-- Efeitos / Modelagem -->
             <div class="menu-item">
-                <button type="button" class="menu-btn">Modelar</button>
+                <button type="button" class="menu-btn" data-i18n="menu_effects">Modelar</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="booleanOperation('weld')"><i class="fas fa-layer-group"></i> Soldar (Weld)</button>
-                    <button type="button" class="dropdown-item" onclick="booleanOperation('trim')"><i class="fas fa-cut"></i> Aparar (Trim)</button>
-                    <button type="button" class="dropdown-item" onclick="booleanOperation('intersect')"><i class="fas fa-circle-notch"></i> Interseção (Intersect)</button>
+                    <button type="button" class="dropdown-item" onclick="booleanOperation('weld')"><i class="fas fa-layer-group"></i> <span>Soldar (Weld)</span></button>
+                    <button type="button" class="dropdown-item" onclick="booleanOperation('trim')"><i class="fas fa-cut"></i> <span>Aparar (Trim)</span></button>
+                    <button type="button" class="dropdown-item" onclick="booleanOperation('intersect')"><i class="fas fa-circle-notch"></i> <span>Interseção (Intersect)</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="openContourDialog()"><i class="fas fa-bullseye text-pink-600"></i> Contorno / Borda de Adesivo...</button>
-                    <button type="button" class="dropdown-item" onclick="openDropShadowDialog()"><i class="fas fa-cloud-moon text-indigo-600"></i> Sombra Projetada (Drop Shadow)...</button>
+                    <button type="button" class="dropdown-item" onclick="openContourDialog()"><i class="fas fa-bullseye text-pink-600"></i> <span data-i18n="menu_contour">Contorno / Borda de Adesivo...</span></button>
+                    <button type="button" class="dropdown-item" onclick="openDropShadowDialog()"><i class="fas fa-cloud-moon text-indigo-600"></i> <span data-i18n="menu_shadow">Sombra Projetada (Drop Shadow)...</span></button>
                 </div>
             </div>
 
             <!-- Bitmap -->
             <div class="menu-item">
-                <button type="button" class="menu-btn">Bitmap</button>
+                <button type="button" class="menu-btn" data-i18n="menu_bitmap">Bitmap</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="openPowerTraceDialog()"><i class="fas fa-bolt text-amber-500"></i> Rastreamento PowerTRACE™...</button>
-                    <button type="button" class="dropdown-item" onclick="toggleImportedBgImage()"><i class="fas fa-eye-slash"></i> Ocultar Fundo / Template</button>
+                    <button type="button" class="dropdown-item" onclick="openPowerTraceDialog()"><i class="fas fa-bolt text-amber-500"></i> <span data-i18n="menu_trace">Rastreamento PowerTRACE™...</span></button>
+                    <button type="button" class="dropdown-item" onclick="toggleImportedBgImage()"><i class="fas fa-eye-slash"></i> <span data-i18n="menu_toggle_bg">Ocultar Fundo / Template</span></button>
                 </div>
             </div>
 
             <!-- Ajuda -->
             <div class="menu-item">
-                <button type="button" class="menu-btn">Ajuda</button>
+                <button type="button" class="menu-btn" data-i18n="menu_help">Ajuda</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="showShortcutsModal()"><i class="fas fa-keyboard"></i> Atalhos de Teclado</button>
-                    <a href="suporte.php" target="_blank" class="dropdown-item"><i class="fas fa-question-circle"></i> Suporte CorelClone</a>
+                    <a href="tutorial.php" target="_blank" class="dropdown-item"><i class="fas fa-book-open text-emerald-600"></i> <span data-i18n="menu_tutorial">Tutorial & Guia Completo...</span></a>
+                    <button type="button" class="dropdown-item" onclick="showShortcutsModal()"><i class="fas fa-keyboard text-sky-600"></i> <span data-i18n="menu_shortcuts">Atalhos de Teclado</span></button>
+                    <a href="suporte.php" target="_blank" class="dropdown-item"><i class="fas fa-question-circle text-purple-600"></i> <span data-i18n="menu_support">Suporte CorelClone & FAQ</span></a>
+                    <div class="dropdown-separator"></div>
+                    <a href="termos.php" target="_blank" class="dropdown-item"><i class="fas fa-file-contract"></i> <span data-i18n="menu_terms">Termos de Serviço</span></a>
+                    <a href="privacidade.php" target="_blank" class="dropdown-item"><i class="fas fa-user-shield"></i> <span data-i18n="menu_privacy">Política de Privacidade</span></a>
                 </div>
             </div>
         </nav>
@@ -191,42 +199,42 @@ $baseDir = './';
         <!-- Level 2: Standard Toolbar -->
         <div class="standard-toolbar">
             <div class="toolbar-group">
-                <button type="button" class="t-btn" onclick="newDocument()" title="Novo (Ctrl+N)"><i class="fas fa-file"></i></button>
-                <button type="button" class="t-btn" onclick="document.getElementById('importFileInput').click()" title="Abrir .CDR / .PDF / SVG (Ctrl+O)"><i class="fas fa-folder-open text-amber-600"></i></button>
-                <button type="button" class="t-btn" onclick="saveProjectJSON()" title="Salvar Projeto (Ctrl+S)"><i class="fas fa-save text-blue-600"></i></button>
-                <button type="button" class="t-btn" onclick="window.print()" title="Imprimir (Ctrl+P)"><i class="fas fa-print"></i></button>
+                <button type="button" class="t-btn" onclick="newDocument()" data-i18n-title="act_new_doc" title="Novo (Ctrl+N)"><i class="fas fa-file"></i></button>
+                <button type="button" class="t-btn" onclick="document.getElementById('importFileInput').click()" data-i18n-title="act_open" title="Abrir .CDR / .PDF / SVG (Ctrl+O)"><i class="fas fa-folder-open text-amber-600"></i></button>
+                <button type="button" class="t-btn" onclick="saveProjectJSON()" data-i18n-title="act_save_svg" title="Salvar Projeto (Ctrl+S)"><i class="fas fa-save text-blue-600"></i></button>
+                <button type="button" class="t-btn" onclick="window.print()" data-i18n-title="act_print_doc" title="Imprimir (Ctrl+P)"><i class="fas fa-print"></i></button>
             </div>
 
             <div class="tool-sep"></div>
 
             <div class="toolbar-group">
-                <button type="button" class="t-btn" onclick="cutSelected()" title="Recortar (Ctrl+X)"><i class="fas fa-cut"></i></button>
-                <button type="button" class="t-btn" onclick="copySelected()" title="Copiar (Ctrl+C)"><i class="fas fa-copy"></i></button>
-                <button type="button" class="t-btn" onclick="pasteSelected()" title="Colar (Ctrl+V)"><i class="fas fa-paste"></i></button>
+                <button type="button" class="t-btn" onclick="cutSelected()" data-i18n-title="act_cut" title="Recortar (Ctrl+X)"><i class="fas fa-cut"></i></button>
+                <button type="button" class="t-btn" onclick="copySelected()" data-i18n-title="act_copy" title="Copiar (Ctrl+C)"><i class="fas fa-copy"></i></button>
+                <button type="button" class="t-btn" onclick="pasteSelected()" data-i18n-title="act_paste" title="Colar (Ctrl+V)"><i class="fas fa-paste"></i></button>
             </div>
 
             <div class="tool-sep"></div>
 
             <div class="toolbar-group">
-                <button type="button" class="t-btn" onclick="undo()" title="Desfazer (Ctrl+Z)"><i class="fas fa-undo"></i></button>
-                <button type="button" class="t-btn" onclick="redo()" title="Refazer (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+                <button type="button" class="t-btn" onclick="undo()" data-i18n-title="act_undo" title="Desfazer (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+                <button type="button" class="t-btn" onclick="redo()" data-i18n-title="act_redo" title="Refazer (Ctrl+Y)"><i class="fas fa-redo"></i></button>
             </div>
 
             <div class="tool-sep"></div>
 
             <!-- Import / Export Actions -->
             <div class="toolbar-group">
-                <button type="button" class="t-btn-labeled" onclick="exportDocument('svg')" title="Exportar vetor SVG limpo">
+                <button type="button" class="t-btn-labeled" onclick="exportDocument('svg')" data-i18n-title="act_exp_svg" title="Exportar vetor SVG limpo">
                     <i class="fas fa-file-code text-orange-600"></i> SVG
                 </button>
-                <button type="button" class="t-btn-labeled" onclick="exportDocument('pdf')" title="Exportar PDF para impressão">
+                <button type="button" class="t-btn-labeled" onclick="exportDocument('pdf')" data-i18n-title="act_exp_pdf" title="Exportar PDF para impressão">
                     <i class="fas fa-file-pdf text-red-600"></i> PDF
                 </button>
-                <button type="button" class="t-btn-labeled" onclick="exportDocument('png')" title="Exportar imagem PNG HD">
+                <button type="button" class="t-btn-labeled" onclick="exportDocument('png')" data-i18n-title="act_exp_png" title="Exportar imagem PNG HD">
                     <i class="fas fa-file-image text-emerald-600"></i> PNG
                 </button>
-                <button type="button" class="t-btn-labeled" onclick="openPrintExportDialog()" title="Pré-impressão com Sangria e Marcas de Corte (Ctrl+P)">
-                    <i class="fas fa-print text-purple-700"></i> Gráfica
+                <button type="button" class="t-btn-labeled" onclick="openPrintExportDialog()" data-i18n-title="act_exp_prepress" title="Pré-impressão com Sangria e Marcas de Corte (Ctrl+P)">
+                    <i class="fas fa-print text-purple-700"></i> <span data-i18n="menu_prepress">Gráfica</span>
                 </button>
             </div>
 
@@ -236,7 +244,7 @@ $baseDir = './';
             <div class="zoom-dropdown-box">
                 <label for="zoomSelect" style="margin-right:4px; font-size:11px; color:#555;"><i class="fas fa-search"></i></label>
                 <select id="zoomSelect" class="corel-select" onchange="changeZoomPreset(this.value)">
-                    <option value="fit">Para Ajustar (F4)</option>
+                    <option value="fit" data-i18n="act_zoom_fit">Para Ajustar (F4)</option>
                     <option value="width">Largura</option>
                     <option value="0.25">25%</option>
                     <option value="0.5">50%</option>
@@ -252,9 +260,9 @@ $baseDir = './';
 
             <!-- Align & Power Actions -->
             <div class="toolbar-group">
-                <button type="button" class="t-btn" onclick="alignSelected('center')" title="Centralizar na Página (P)"><i class="fas fa-crosshairs"></i></button>
-                <button type="button" class="t-btn" id="btnToggleDuplicateBg" onclick="toggleImportedBgImage()" style="display:none;" title="Ocultar Imagem de Fundo Duplicada do Modelo"><i class="fas fa-eye-slash text-amber-600"></i></button>
-                <button type="button" class="t-btn" id="btnQuickPowerTrace" onclick="openPowerTraceDialog()" title="PowerTRACE™ — Vetorizar Bitmap"><i class="fas fa-bolt text-amber-500"></i></button>
+                <button type="button" class="t-btn" onclick="alignSelected('center')" data-i18n-title="prop_align_p" title="Centralizar na Página (P)"><i class="fas fa-crosshairs"></i></button>
+                <button type="button" class="t-btn" id="btnToggleDuplicateBg" onclick="toggleImportedBgImage()" style="display:none;" data-i18n-title="menu_toggle_bg" title="Ocultar Imagem de Fundo Duplicada do Modelo"><i class="fas fa-eye-slash text-amber-600"></i></button>
+                <button type="button" class="t-btn" id="btnQuickPowerTrace" onclick="openPowerTraceDialog()" data-i18n-title="prop_trace_title" title="PowerTRACE™ — Vetorizar Bitmap"><i class="fas fa-bolt text-amber-500"></i></button>
             </div>
 
             <!-- Hidden File Input for .CDR, .PDF, .SVG, Images -->
@@ -287,8 +295,8 @@ $baseDir = './';
                     <input type="number" id="docPropHeight" class="prop-input" value="793" onchange="updateDocDimensionsFromInput()">
                 </div>
                 <div class="toolbar-group" style="margin-left:4px;">
-                    <button type="button" class="t-btn active" id="btnOrientLandscape" onclick="setDocOrientation('landscape')" title="Paisagem"><i class="fas fa-file-alt fa-rotate-90"></i></button>
-                    <button type="button" class="t-btn" id="btnOrientPortrait" onclick="setDocOrientation('portrait')" title="Retrato"><i class="fas fa-file-alt"></i></button>
+                    <button type="button" class="t-btn active" id="btnOrientLandscape" onclick="setDocOrientation('landscape')" data-i18n-title="prop_landscape" title="Paisagem"><i class="fas fa-file-alt fa-rotate-90"></i></button>
+                    <button type="button" class="t-btn" id="btnOrientPortrait" onclick="setDocOrientation('portrait')" data-i18n-title="prop_portrait" title="Retrato"><i class="fas fa-file-alt"></i></button>
                 </div>
                 <div class="tool-sep"></div>
                 <div class="prop-field">
@@ -306,30 +314,30 @@ $baseDir = './';
             <div id="propGroupObject" class="toolbar-group" style="display:none;">
                 <div class="prop-field">
                     <label>X:</label>
-                    <input type="number" id="objPropX" class="prop-input" value="0" onchange="updateSelectedTransformFromProp()">
+                    <input type="number" id="objPropX" class="prop-input" value="0" data-i18n-title="prop_pos_x" onchange="updateSelectedTransformFromProp()">
                 </div>
                 <div class="prop-field">
                     <label>Y:</label>
-                    <input type="number" id="objPropY" class="prop-input" value="0" onchange="updateSelectedTransformFromProp()">
+                    <input type="number" id="objPropY" class="prop-input" value="0" data-i18n-title="prop_pos_y" onchange="updateSelectedTransformFromProp()">
                 </div>
                 <div class="tool-sep"></div>
                 <div class="prop-field">
                     <label>L:</label>
-                    <input type="number" id="objPropW" class="prop-input" value="100" onchange="updateSelectedTransformFromProp()">
+                    <input type="number" id="objPropW" class="prop-input" value="100" data-i18n-title="prop_width" onchange="updateSelectedTransformFromProp()">
                 </div>
                 <div class="prop-field">
                     <label>A:</label>
-                    <input type="number" id="objPropH" class="prop-input" value="100" onchange="updateSelectedTransformFromProp()">
+                    <input type="number" id="objPropH" class="prop-input" value="100" data-i18n-title="prop_height" onchange="updateSelectedTransformFromProp()">
                 </div>
                 <div class="tool-sep"></div>
                 <div class="prop-field">
                     <label><i class="fas fa-redo-alt"></i></label>
-                    <input type="number" id="objPropRotate" class="prop-input" style="width:50px;" value="0" onchange="updateSelectedTransformFromProp()">
+                    <input type="number" id="objPropRotate" class="prop-input" style="width:50px;" value="0" data-i18n-title="prop_angle" onchange="updateSelectedTransformFromProp()">
                     <span style="font-size:10px; color:#666;">°</span>
                 </div>
                 <div class="toolbar-group" title="Espelhamento CorelDRAW">
-                    <button type="button" class="t-btn" onclick="flipSelected('horizontal')" title="Espelhar Horizontalmente"><i class="fas fa-arrows-alt-h text-indigo-600"></i></button>
-                    <button type="button" class="t-btn" onclick="flipSelected('vertical')" title="Espelhar Verticalmente"><i class="fas fa-arrows-alt-v text-indigo-600"></i></button>
+                    <button type="button" class="t-btn" onclick="flipSelected('horizontal')" data-i18n-title="prop_flip_h" title="Espelhar Horizontalmente"><i class="fas fa-arrows-alt-h text-indigo-600"></i></button>
+                    <button type="button" class="t-btn" onclick="flipSelected('vertical')" data-i18n-title="prop_flip_v" title="Espelhar Verticalmente"><i class="fas fa-arrows-alt-v text-indigo-600"></i></button>
                 </div>
                 <div class="tool-sep"></div>
                 <!-- Boolean Modeling -->
@@ -341,31 +349,31 @@ $baseDir = './';
                 <div class="tool-sep"></div>
                 <!-- Corel Align Buttons -->
                 <div class="toolbar-group" title="Alinhamento Rápido Corel (Atalhos: C, E, L, R, T, B, P)">
-                    <button type="button" class="t-btn" onclick="alignSelected('L')" title="Alinhar à Esquerda (L)"><i class="fas fa-align-left"></i></button>
-                    <button type="button" class="t-btn" onclick="alignSelected('C')" title="Centralizar Horizontal (C)"><i class="fas fa-arrows-alt-h"></i></button>
-                    <button type="button" class="t-btn" onclick="alignSelected('R')" title="Alinhar à Direita (R)"><i class="fas fa-align-right"></i></button>
-                    <button type="button" class="t-btn" onclick="alignSelected('T')" title="Alinhar pelo Topo (T)"><i class="fas fa-arrow-up" style="font-size:10px;"></i></button>
-                    <button type="button" class="t-btn" onclick="alignSelected('E')" title="Centralizar Vertical (E)"><i class="fas fa-arrows-alt-v"></i></button>
-                    <button type="button" class="t-btn" onclick="alignSelected('B')" title="Alinhar pela Base (B)"><i class="fas fa-arrow-down" style="font-size:10px;"></i></button>
-                    <button type="button" class="t-btn" onclick="alignSelected('P')" title="Centralizar na Página (P)"><i class="fas fa-crosshairs text-blue-600"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('L')" data-i18n-title="menu_align_left" title="Alinhar à Esquerda (L)"><i class="fas fa-align-left"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('C')" data-i18n-title="menu_align_center_h" title="Centralizar Horizontal (C)"><i class="fas fa-arrows-alt-h"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('R')" data-i18n-title="menu_align_right" title="Alinhar à Direita (R)"><i class="fas fa-align-right"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('T')" data-i18n-title="menu_align_top" title="Alinhar pelo Topo (T)"><i class="fas fa-arrow-up" style="font-size:10px;"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('E')" data-i18n-title="menu_align_center_v" title="Centralizar Vertical (E)"><i class="fas fa-arrows-alt-v"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('B')" data-i18n-title="menu_align_bottom" title="Alinhar pela Base (B)"><i class="fas fa-arrow-down" style="font-size:10px;"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('P')" data-i18n-title="prop_align_p" title="Centralizar na Página (P)"><i class="fas fa-crosshairs text-blue-600"></i></button>
                 </div>
                 <div class="tool-sep"></div>
                 <!-- PowerClip Quick Buttons -->
                 <div class="toolbar-group">
-                    <button type="button" class="t-btn" onclick="applyPowerClip()" title="PowerClip: Colocar no Recipiente"><i class="fas fa-sign-in-alt text-amber-600"></i></button>
-                    <button type="button" class="t-btn" id="btnExtractPowerClip" onclick="extractPowerClip()" style="display:none;" title="PowerClip: Extrair Conteúdo"><i class="fas fa-sign-out-alt text-amber-600"></i></button>
-                    <button type="button" class="t-btn" onclick="openContourDialog()" title="Contorno / Borda de Adesivo e Corte (Contour)"><i class="fas fa-bullseye text-pink-600"></i></button>
-                    <button type="button" class="t-btn" onclick="openFountainFillDialog()" title="Preenchimento Gradiente / Degradê (F11)"><i class="fas fa-fill text-purple-600"></i></button>
-                    <button type="button" class="t-btn" onclick="openDropShadowDialog()" title="Sombra Projetada (Drop Shadow)"><i class="fas fa-cloud-moon text-indigo-600"></i></button>
-                    <button type="button" class="t-btn" onclick="fitTextToPath()" title="Ajustar Texto ao Caminho (Curvar Texto)"><i class="fas fa-italic text-sky-600"></i></button>
-                    <button type="button" class="t-btn" id="btnSepTextPath" onclick="separateTextFromPath()" style="display:none;" title="Separar Texto do Caminho"><i class="fas fa-unlink text-sky-600"></i></button>
-                    <button type="button" class="t-btn" onclick="duplicateSelected()" title="Duplicar Objeto (Ctrl+D)"><i class="fas fa-clone text-slate-700"></i></button>
-                    <button type="button" class="t-btn" onclick="repeatTransform()" title="Repetir / Duplicar com Passo (Ctrl+R)"><i class="fas fa-redo text-amber-500"></i></button>
+                    <button type="button" class="t-btn" onclick="applyPowerClip()" data-i18n-title="menu_pc_place" title="PowerClip: Colocar no Recipiente"><i class="fas fa-sign-in-alt text-amber-600"></i></button>
+                    <button type="button" class="t-btn" id="btnExtractPowerClip" onclick="extractPowerClip()" style="display:none;" data-i18n-title="menu_pc_extract" title="PowerClip: Extrair Conteúdo"><i class="fas fa-sign-out-alt text-amber-600"></i></button>
+                    <button type="button" class="t-btn" onclick="openContourDialog()" data-i18n-title="prop_contour_btn" title="Contorno / Borda de Adesivo e Corte (Contour)"><i class="fas fa-bullseye text-pink-600"></i></button>
+                    <button type="button" class="t-btn" onclick="openFountainFillDialog()" data-i18n-title="prop_fountain_btn" title="Preenchimento Gradiente / Degradê (F11)"><i class="fas fa-fill text-purple-600"></i></button>
+                    <button type="button" class="t-btn" onclick="openDropShadowDialog()" data-i18n-title="prop_shadow_btn" title="Sombra Projetada (Drop Shadow)"><i class="fas fa-cloud-moon text-indigo-600"></i></button>
+                    <button type="button" class="t-btn" onclick="fitTextToPath()" data-i18n-title="prop_text_path_btn" title="Ajustar Texto ao Caminho (Curvar Texto)"><i class="fas fa-italic text-sky-600"></i></button>
+                    <button type="button" class="t-btn" id="btnSepTextPath" onclick="separateTextFromPath()" style="display:none;" data-i18n-title="prop_sep_path_btn" title="Separar Texto do Caminho"><i class="fas fa-unlink text-sky-600"></i></button>
+                    <button type="button" class="t-btn" onclick="duplicateSelected()" data-i18n-title="prop_dup_btn" title="Duplicar Objeto (Ctrl+D)"><i class="fas fa-clone text-slate-700"></i></button>
+                    <button type="button" class="t-btn" onclick="repeatTransform()" data-i18n-title="prop_repeat_btn" title="Repetir / Duplicar com Passo (Ctrl+R)"><i class="fas fa-redo text-amber-500"></i></button>
                 </div>
                 <div class="tool-sep"></div>
                 <!-- PowerTRACE Action Button for Selected Bitmaps -->
-                <button type="button" class="t-btn-primary" id="btnTraceSelected" onclick="openPowerTraceDialog()" style="display:none; gap:5px; font-size:11px; padding:3px 9px; background:#d97706; border-color:#b45309;" title="PowerTRACE: Rastrear e Vetorizar esta Imagem">
-                    <i class="fas fa-bolt text-amber-200"></i> <span>Rastrear Bitmap</span>
+                <button type="button" class="t-btn-primary" id="btnTraceSelected" onclick="openPowerTraceDialog()" style="display:none; gap:5px; font-size:11px; padding:3px 9px; background:#d97706; border-color:#b45309;" data-i18n-title="prop_trace_title" title="PowerTRACE: Rastrear e Vetorizar esta Imagem">
+                    <i class="fas fa-bolt text-amber-200"></i> <span data-i18n="prop_trace_selected">Rastrear Bitmap</span>
                 </button>
             </div>
 
@@ -382,10 +390,10 @@ $baseDir = './';
         <!-- Level 4: Document Tabs Bar (Abas Superiores Corel) -->
         <div class="document-tabs-bar" id="corelTabsBar">
             <div class="doc-tab" onclick="switchDocumentTab('welcome')">
-                <i class="fas fa-home"></i> <span>Tela Inicial</span>
+                <i class="fas fa-home"></i> <span data-i18n="tab_start_page">Tela Inicial</span>
             </div>
             <div class="doc-tab active" id="tabDoc1" onclick="switchDocumentTab('page0')">
-                <i class="fas fa-vector-square text-cyan-600"></i> <span>Documento 1</span>
+                <i class="fas fa-vector-square text-cyan-600"></i> <span data-i18n="doc_default_name">Documento 1</span>
                 <span class="tab-close" onclick="closeDocTab(event, 0)">✕</span>
             </div>
             <button type="button" class="btn-new-tab" onclick="addNewPageTab()" title="Nova Página / Aba (+)"><i class="fas fa-plus"></i></button>
@@ -398,59 +406,59 @@ $baseDir = './';
         <!-- Left Vertical Toolbox (Caixa de Ferramentas Corel) -->
         <aside class="corel-toolbox">
             <!-- 1. Pick Tool -->
-            <button type="button" class="tool-btn active" id="toolBtn_select" onclick="selectTool('select')" title="Ferramenta Seleção (Espaço)">
+            <button type="button" class="tool-btn active" id="toolBtn_select" onclick="selectTool('select')" data-i18n-title="tool_pick" title="Ferramenta Seleção (Espaço)">
                 <i class="fas fa-mouse-pointer"></i>
             </button>
             <!-- 2. Shape Tool (F10) -->
-            <button type="button" class="tool-btn" id="toolBtn_node" onclick="selectTool('node')" title="Ferramenta Forma / Nós (F10)">
+            <button type="button" class="tool-btn" id="toolBtn_node" onclick="selectTool('node')" data-i18n-title="tool_shape" title="Ferramenta Forma / Nós (F10)">
                 <i class="fas fa-bezier-curve"></i>
             </button>
             <!-- 3. Crop / Knife -->
-            <button type="button" class="tool-btn" id="toolBtn_crop" onclick="selectTool('crop')" title="Cortar / Faca (C)">
+            <button type="button" class="tool-btn" id="toolBtn_crop" onclick="selectTool('crop')" data-i18n-title="tool_crop" title="Cortar / Faca (C)">
                 <i class="fas fa-crop-alt"></i>
             </button>
             <!-- 4. Zoom / Pan -->
-            <button type="button" class="tool-btn" id="toolBtn_zoom" onclick="selectTool('pan')" title="Pan / Mover Tela (H)">
+            <button type="button" class="tool-btn" id="toolBtn_zoom" onclick="selectTool('pan')" data-i18n-title="tool_pan" title="Pan / Mover Tela (H)">
                 <i class="fas fa-hand-paper"></i>
             </button>
             <!-- 5. Freehand / Pen -->
-            <button type="button" class="tool-btn" id="toolBtn_pen" onclick="selectTool('pen')" title="Caneta Bézier / Mão Livre">
+            <button type="button" class="tool-btn" id="toolBtn_pen" onclick="selectTool('pen')" data-i18n-title="tool_pen" title="Caneta Bézier / Mão Livre">
                 <i class="fas fa-pen-nib"></i>
             </button>
             <!-- 6. Artistic Media / Brush -->
-            <button type="button" class="tool-btn" id="toolBtn_brush" onclick="selectTool('brush')" title="Mídia Artística / Pincel">
+            <button type="button" class="tool-btn" id="toolBtn_brush" onclick="selectTool('brush')" data-i18n-title="tool_brush" title="Mídia Artística / Pincel">
                 <i class="fas fa-paint-brush"></i>
             </button>
             <!-- 7. Rectangle (F6) -->
-            <button type="button" class="tool-btn" id="toolBtn_rect" onclick="selectTool('rect')" title="Retângulo (F6)">
+            <button type="button" class="tool-btn" id="toolBtn_rect" onclick="selectTool('rect')" data-i18n-title="tool_rect" title="Retângulo (F6)">
                 <i class="far fa-square"></i>
             </button>
             <!-- 8. Ellipse (F7) -->
-            <button type="button" class="tool-btn" id="toolBtn_ellipse" onclick="selectTool('ellipse')" title="Elipse (F7)">
+            <button type="button" class="tool-btn" id="toolBtn_ellipse" onclick="selectTool('ellipse')" data-i18n-title="tool_ellipse" title="Elipse (F7)">
                 <i class="far fa-circle"></i>
             </button>
             <!-- 9. Star / Polygon (Y) -->
-            <button type="button" class="tool-btn" id="toolBtn_star" onclick="selectTool('star')" title="Polígono / Estrela (Y)">
+            <button type="button" class="tool-btn" id="toolBtn_star" onclick="selectTool('star')" data-i18n-title="tool_poly" title="Polígono / Estrela (Y)">
                 <i class="far fa-star"></i>
             </button>
             <!-- 10. Text (F8) -->
-            <button type="button" class="tool-btn" id="toolBtn_text" onclick="selectTool('text')" title="Texto (F8)">
+            <button type="button" class="tool-btn" id="toolBtn_text" onclick="selectTool('text')" data-i18n-title="tool_text" title="Texto (F8)">
                 <i class="fas fa-font"></i>
             </button>
             <!-- 11. Eyedropper -->
-            <button type="button" class="tool-btn" id="toolBtn_eyedropper" onclick="selectTool('eyedropper')" title="Conta-gotas de Cor">
+            <button type="button" class="tool-btn" id="toolBtn_eyedropper" onclick="selectTool('eyedropper')" data-i18n-title="tool_eyedropper" title="Conta-gotas de Cor">
                 <i class="fas fa-eye-dropper"></i>
             </button>
             <!-- 12. Fill Tool -->
-            <button type="button" class="tool-btn" id="toolBtn_fill" onclick="selectTool('fill')" title="Preenchimento Interativo (G)">
+            <button type="button" class="tool-btn" id="toolBtn_fill" onclick="selectTool('fill')" data-i18n-title="tool_fountain" title="Preenchimento Interativo (G)">
                 <i class="fas fa-fill-drip"></i>
             </button>
             <!-- 13. PowerTRACE (Vetorizar Bitmap) -->
-            <button type="button" class="tool-btn" id="toolBtn_trace" onclick="openPowerTraceDialog()" title="PowerTRACE™ — Vetorizar Bitmap / Logo (Curvas)">
+            <button type="button" class="tool-btn" id="toolBtn_trace" onclick="openPowerTraceDialog()" data-i18n-title="prop_trace_title" title="PowerTRACE™ — Vetorizar Bitmap / Logo (Curvas)">
                 <i class="fas fa-bolt text-amber-500"></i>
             </button>
             <!-- 14. Contour Tool (Borda de Adesivo / Corte) -->
-            <button type="button" class="tool-btn" id="toolBtn_contour" onclick="openContourDialog()" title="Contorno / Borda de Adesivo e Corte (Contour)">
+            <button type="button" class="tool-btn" id="toolBtn_contour" onclick="openContourDialog()" data-i18n-title="prop_contour_btn" title="Contorno / Borda de Adesivo e Corte (Contour)">
                 <i class="fas fa-bullseye text-pink-600"></i>
             </button>
 
@@ -505,7 +513,7 @@ $baseDir = './';
         <!-- Right Side Docker: Objects (Camadas e Objetos) -->
         <aside class="docker-container" id="objectsDocker">
             <div class="docker-header">
-                <div class="docker-title"><i class="fas fa-layer-group text-blue-600"></i> Objetos / Camadas</div>
+                <div class="docker-title"><i class="fas fa-layer-group text-blue-600"></i> <span data-i18n="docker_title">Objetos / Camadas</span></div>
                 <div class="docker-controls">
                     <button type="button" class="btn-win-ctl" onclick="toggleDockerCollapse()" title="Recolher / Expandir"><i class="fas fa-chevron-right"></i></button>
                 </div>
@@ -514,16 +522,16 @@ $baseDir = './';
             <div class="docker-body">
                 <!-- Search bar -->
                 <div class="objects-search-bar">
-                    <input type="text" id="objectsSearchInput" class="objects-search-input" placeholder="Pesquisar objetos..." oninput="filterObjectsTree(this.value)">
+                    <input type="text" id="objectsSearchInput" class="objects-search-input" data-i18n-placeholder="docker_search_ph" placeholder="Pesquisar objetos..." oninput="filterObjectsTree(this.value)">
                 </div>
 
                 <!-- Blending Mode & Opacity -->
                 <div class="objects-blend-row">
                     <select id="blendModeSelect" class="corel-select" style="width:110px;" onchange="changeSelectedBlendMode(this.value)">
-                        <option value="normal">Normal</option>
-                        <option value="multiply">Multiplicar</option>
-                        <option value="screen">Tela</option>
-                        <option value="overlay">Sobrepor</option>
+                        <option value="normal" data-i18n="docker_blend_normal">Normal</option>
+                        <option value="multiply" data-i18n="docker_blend_multiply">Multiplicar</option>
+                        <option value="screen" data-i18n="docker_blend_screen">Tela</option>
+                        <option value="overlay" data-i18n="docker_blend_overlay">Sobrepor</option>
                         <option value="darken">Escurecer</option>
                         <option value="lighten">Clarear</option>
                     </select>
@@ -541,17 +549,17 @@ $baseDir = './';
 
                 <!-- Docker Bottom Actions Bar -->
                 <div class="docker-bottom-bar">
-                    <button type="button" class="t-btn" onclick="addNewLayer()" title="Nova Camada"><i class="fas fa-plus-square text-blue-600"></i></button>
-                    <button type="button" class="t-btn" onclick="duplicateSelected()" title="Duplicar Objeto"><i class="fas fa-clone text-amber-600"></i></button>
-                    <button type="button" class="t-btn" onclick="deleteSelected()" title="Excluir (Delete)"><i class="fas fa-trash text-red-600"></i></button>
+                    <button type="button" class="t-btn" onclick="addNewLayer()" data-i18n-title="docker_btn_up" title="Nova Camada"><i class="fas fa-plus-square text-blue-600"></i></button>
+                    <button type="button" class="t-btn" onclick="duplicateSelected()" data-i18n-title="prop_dup_btn" title="Duplicar Objeto"><i class="fas fa-clone text-amber-600"></i></button>
+                    <button type="button" class="t-btn" onclick="deleteSelected()" data-i18n-title="docker_btn_del" title="Excluir (Delete)"><i class="fas fa-trash text-red-600"></i></button>
                 </div>
             </div>
         </aside>
 
         <!-- Collapsible Vertical Tabs on Far Right (Hints, Objects, etc.) -->
         <div class="docker-vertical-tabs">
-            <button type="button" class="v-tab-btn" onclick="switchRightTab('hints')">Dicas</button>
-            <button type="button" class="v-tab-btn active" onclick="switchRightTab('objects')">Objetos</button>
+            <button type="button" class="v-tab-btn" onclick="switchRightTab('hints')" data-i18n="hints_title">Dicas</button>
+            <button type="button" class="v-tab-btn active" onclick="switchRightTab('objects')" data-i18n="docker_title">Objetos</button>
             <button type="button" class="v-tab-btn" onclick="switchRightTab('media')">Mídia</button>
         </div>
 
@@ -575,14 +583,14 @@ $baseDir = './';
                 <i class="fas fa-mouse-pointer"></i> <span>X: 0.0 mm &nbsp; Y: 0.0 mm</span>
             </div>
             <div class="status-item" id="statusContextHint" style="color:#2563eb; font-weight:500;">
-                Segure CTRL para restringir proporção, ALT para transformar pelo centro.
+                <span data-i18n="status_help_text">Segure CTRL para restringir proporção, ALT para transformar pelo centro.</span>
             </div>
         </div>
 
         <div class="status-right">
             <!-- Document Colors Used -->
             <div class="status-doc-palette">
-                <span class="doc-palette-title">Cores do Documento:</span>
+                <span class="doc-palette-title" data-i18n="status_color_palette_name">Cores do Documento:</span>
                 <div id="docRecentColors" style="display:flex; gap:2px;"></div>
             </div>
             <span style="opacity:0.6;">CorelClone Pro 2026 (4uLabs)</span>
@@ -594,7 +602,7 @@ $baseDir = './';
 <div id="powertraceModal" class="modal-overlay" style="display:none;">
     <div class="modal-card" style="width: 580px; max-width:95vw;">
         <div class="modal-header">
-            <div class="modal-title"><i class="fas fa-bolt text-amber-500"></i> Corel PowerTRACE™ — Vetorizador de Bitmap</div>
+            <div class="modal-title"><i class="fas fa-bolt text-amber-500"></i> <span data-i18n="trace_title">Corel PowerTRACE™ — Vetorizador de Bitmap</span></div>
             <button type="button" class="btn-win-ctl" onclick="closePowerTraceDialog()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
@@ -683,9 +691,9 @@ $baseDir = './';
             </div>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn-secondary" onclick="closePowerTraceDialog()">Cancelar</button>
+            <button type="button" class="btn-secondary" onclick="closePowerTraceDialog()"><span data-i18n="trace_cancel">Cancelar</span></button>
             <button type="button" class="btn-primary" onclick="runPowerTrace()" style="background:#d97706; border-color:#b45309; padding:7px 16px;">
-                <i class="fas fa-magic"></i> Rastrear e Gerar Curvas Vetoriais
+                <i class="fas fa-magic"></i> <span data-i18n="trace_run">Rastrear e Gerar Curvas Vetoriais</span>
             </button>
         </div>
     </div>
@@ -695,7 +703,7 @@ $baseDir = './';
 <div id="contourModal" class="modal-overlay" style="display:none;">
     <div class="modal-card" style="width: 480px; max-width:95vw;">
         <div class="modal-header">
-            <div class="modal-title"><i class="fas fa-bullseye text-pink-600"></i> Ferramenta Contorno / Borda de Corte (Contour)</div>
+            <div class="modal-title"><i class="fas fa-bullseye text-pink-600"></i> <span data-i18n="contour_title">Ferramenta Contorno / Borda de Corte (Contour)</span></div>
             <button type="button" class="btn-win-ctl" onclick="closeContourDialog()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
@@ -748,9 +756,9 @@ $baseDir = './';
             </div>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn-secondary" onclick="closeContourDialog()">Cancelar</button>
+            <button type="button" class="btn-secondary" onclick="closeContourDialog()"><span data-i18n="contour_cancel">Cancelar</span></button>
             <button type="button" class="btn-primary" onclick="applyContourFromModal()" style="background:#db2777; border-color:#be185d; padding:7px 16px;">
-                <i class="fas fa-bullseye"></i> Aplicar Contorno
+                <i class="fas fa-bullseye"></i> <span data-i18n="contour_apply">Aplicar Contorno</span>
             </button>
         </div>
     </div>
@@ -760,7 +768,7 @@ $baseDir = './';
 <div id="fountainFillModal" class="modal-overlay" style="display:none;">
     <div class="modal-card" style="width: 500px; max-width:95vw;">
         <div class="modal-header">
-            <div class="modal-title"><i class="fas fa-fill text-purple-600"></i> Preenchimento Gradiente (Fountain Fill — F11)</div>
+            <div class="modal-title"><i class="fas fa-fill text-purple-600"></i> <span data-i18n="fountain_title">Preenchimento Gradiente (Fountain Fill — F11)</span></div>
             <button type="button" class="btn-win-ctl" onclick="closeFountainFillDialog()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
@@ -839,9 +847,9 @@ $baseDir = './';
             </div>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn-secondary" onclick="closeFountainFillDialog()">Cancelar</button>
+            <button type="button" class="btn-secondary" onclick="closeFountainFillDialog()"><span data-i18n="fountain_cancel">Cancelar</span></button>
             <button type="button" class="btn-primary" onclick="applyFountainFillFromModal()" style="background:#7c3aed; border-color:#6d28d9; padding:7px 16px;">
-                <i class="fas fa-fill"></i> Aplicar Gradiente
+                <i class="fas fa-fill"></i> <span data-i18n="fountain_apply">Aplicar Gradiente</span>
             </button>
         </div>
     </div>
@@ -851,7 +859,7 @@ $baseDir = './';
 <div id="qrcodeModal" class="modal-overlay" style="display:none;">
     <div class="modal-card" style="width: 480px; max-width:95vw;">
         <div class="modal-header">
-            <div class="modal-title"><i class="fas fa-qrcode text-emerald-600"></i> Inserir Código QR Code Vetorial</div>
+            <div class="modal-title"><i class="fas fa-qrcode text-emerald-600"></i> <span data-i18n="qr_title">Inserir Código QR Code Vetorial</span></div>
             <button type="button" class="btn-win-ctl" onclick="closeQrCodeDialog()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
@@ -901,9 +909,9 @@ $baseDir = './';
             </div>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn-secondary" onclick="closeQrCodeDialog()">Cancelar</button>
+            <button type="button" class="btn-secondary" onclick="closeQrCodeDialog()"><span data-i18n="qr_cancel">Cancelar</span></button>
             <button type="button" class="btn-primary" onclick="generateAndInsertQrCode()" style="background:#059669; border-color:#047857; padding:7px 16px;">
-                <i class="fas fa-qrcode"></i> Inserir na Prancheta
+                <i class="fas fa-qrcode"></i> <span data-i18n="qr_insert">Inserir na Prancheta</span>
             </button>
         </div>
     </div>
@@ -913,7 +921,7 @@ $baseDir = './';
 <div id="dropShadowModal" class="modal-overlay" style="display:none;">
     <div class="modal-card" style="width: 480px; max-width:95vw;">
         <div class="modal-header">
-            <div class="modal-title"><i class="fas fa-cloud-moon text-indigo-600"></i> Sombra Projetada (Drop Shadow)</div>
+            <div class="modal-title"><i class="fas fa-cloud-moon text-indigo-600"></i> <span data-i18n="shadow_title">Sombra Projetada (Drop Shadow)</span></div>
             <button type="button" class="btn-win-ctl" onclick="closeDropShadowDialog()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
@@ -971,10 +979,10 @@ $baseDir = './';
             </div>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn-secondary" onclick="removeDropShadowFromSelected()" style="color:#dc2626; margin-right:auto;"><i class="fas fa-trash"></i> Remover Sombra</button>
-            <button type="button" class="btn-secondary" onclick="closeDropShadowDialog()">Cancelar</button>
+            <button type="button" class="btn-secondary" onclick="removeDropShadowFromSelected()" style="color:#dc2626; margin-right:auto;"><i class="fas fa-trash"></i> <span data-i18n="shadow_remove">Remover Sombra</span></button>
+            <button type="button" class="btn-secondary" onclick="closeDropShadowDialog()"><span data-i18n="shadow_cancel">Cancelar</span></button>
             <button type="button" class="btn-primary" onclick="applyDropShadowFromModal()" style="background:#4f46e5; border-color:#4338ca; padding:7px 16px;">
-                <i class="fas fa-check"></i> Aplicar Sombra
+                <i class="fas fa-check"></i> <span data-i18n="shadow_apply">Aplicar Sombra</span>
             </button>
         </div>
     </div>
@@ -984,7 +992,7 @@ $baseDir = './';
 <div id="printExportModal" class="modal-overlay" style="display:none;">
     <div class="modal-card" style="width: 520px; max-width:95vw;">
         <div class="modal-header">
-            <div class="modal-title"><i class="fas fa-print text-red-600"></i> Preparar para Impressão / Gráfica (Pré-impressão)</div>
+            <div class="modal-title"><i class="fas fa-print text-red-600"></i> <span data-i18n="prepress_title">Preparar para Impressão / Gráfica (Pré-impressão)</span></div>
             <button type="button" class="btn-win-ctl" onclick="closePrintExportDialog()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
@@ -1038,16 +1046,16 @@ $baseDir = './';
             </div>
         </div>
         <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <button type="button" class="btn-secondary" onclick="closePrintExportDialog()">Fechar</button>
+            <button type="button" class="btn-secondary" onclick="closePrintExportDialog()"><span data-i18n="prepress_close">Fechar</span></button>
             <div style="display:flex; gap:6px;">
                 <button type="button" class="btn-secondary" onclick="executePrintExport('svg')" title="Baixar arquivo SVG vetorial limpo com sangria e marcas">
-                    <i class="fas fa-file-code text-orange-600"></i> Baixar SVG
+                    <i class="fas fa-file-code text-orange-600"></i> <span data-i18n="prepress_svg">Baixar SVG</span>
                 </button>
                 <button type="button" class="btn-secondary" onclick="executePrintExport('png')" title="Baixar imagem em 300 DPI">
-                    <i class="fas fa-file-image text-emerald-600"></i> Baixar PNG 300 DPI
+                    <i class="fas fa-file-image text-emerald-600"></i> <span data-i18n="prepress_png">Baixar PNG 300 DPI</span>
                 </button>
                 <button type="button" class="btn-primary" onclick="executePrintExport('print')" style="background:#dc2626; border-color:#b91c1c; padding:7px 14px;">
-                    <i class="fas fa-print"></i> Imprimir / PDF Vetorial
+                    <i class="fas fa-print"></i> <span data-i18n="prepress_print">Imprimir / PDF Vetorial</span>
                 </button>
             </div>
         </div>
@@ -1058,7 +1066,7 @@ $baseDir = './';
 <div id="localBridgeModal" class="modal-overlay" style="display:none;">
     <div class="modal-card" style="width: 500px; max-width:95vw;">
         <div class="modal-header">
-            <div class="modal-title"><i class="fas fa-desktop text-cyan-600"></i> CorelClone App Local (100% Vetorial)</div>
+            <div class="modal-title"><i class="fas fa-desktop text-cyan-600"></i> <span data-i18n="bridge_title">CorelClone App Local (100% Vetorial)</span></div>
             <button type="button" class="btn-win-ctl" onclick="closeLocalBridgeModal()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
@@ -1085,9 +1093,9 @@ $baseDir = './';
             </div>
         </div>
         <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
-            <button type="button" class="btn-secondary" onclick="closeLocalBridgeModal()">Continuar na Web</button>
+            <button type="button" class="btn-secondary" onclick="closeLocalBridgeModal()"><span data-i18n="bridge_continue">Continuar na Web</span></button>
             <button type="button" class="btn-primary" onclick="openLocalBridgeApp()" style="background:#0284c7; border-color:#0369a1; padding:7px 16px;">
-                <i class="fas fa-sync-alt"></i> Tentar Conectar
+                <i class="fas fa-sync-alt"></i> <span data-i18n="bridge_connect">Tentar Conectar</span>
             </button>
         </div>
     </div>
@@ -1097,7 +1105,7 @@ $baseDir = './';
 <div id="downloadDesktopModal" class="modal-overlay" style="display:none;">
     <div class="modal-card" style="width: 680px; max-width:95vw;">
         <div class="modal-header">
-            <div class="modal-title"><i class="fas fa-desktop text-emerald-600"></i> Escolha a melhor opção para seu trabalho</div>
+            <div class="modal-title"><i class="fas fa-desktop text-emerald-600"></i> <span data-i18n="desktop_title">Escolha a melhor opção para seu trabalho</span></div>
             <button type="button" class="btn-win-ctl" onclick="closeDownloadDesktopModal()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body" style="padding:16px;">
@@ -1195,13 +1203,13 @@ $baseDir = './';
                     </div>
                 </div>
                 <button type="button" class="btn btn-primary" onclick="installPWA()" style="background:#059669; border-color:#047857; font-size:12px; padding:9px 16px; font-weight:700; cursor:pointer; white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.08);">
-                    <i class="fas fa-plus-circle"></i> Instalar WebApp
+                    <i class="fas fa-plus-circle"></i> <span data-i18n="pwa_install">Instalar WebApp</span>
                 </button>
             </div>
 
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn-secondary" onclick="closeDownloadDesktopModal()">Fechar</button>
+            <button type="button" class="btn-secondary" onclick="closeDownloadDesktopModal()"><span data-i18n="desktop_close">Fechar</span></button>
         </div>
     </div>
 </div>
@@ -1210,6 +1218,7 @@ $baseDir = './';
 <div id="toastContainer" class="toast-container"></div>
 
 <!-- Scripts -->
+<script src="corel_i18n.js?v=<?php echo $v; ?>"></script>
 <script src="script.js?v=<?php echo $v; ?>"></script>
 </body>
 </html>

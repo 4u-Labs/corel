@@ -128,6 +128,42 @@ body, html {
     color: #ffffff;
 }
 
+/* Language Switcher (PT / EN) */
+.lang-switch-box {
+    display: inline-flex;
+    align-items: center;
+    background: #d8d8d8;
+    border: 1px solid #c0c0c0;
+    border-radius: 4px;
+    padding: 1px;
+    gap: 2px;
+}
+
+.lang-btn {
+    background: transparent;
+    border: none;
+    color: #4b5563;
+    font-size: 10.5px;
+    font-weight: 700;
+    font-family: inherit;
+    padding: 2px 7px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.2;
+}
+
+.lang-btn:hover {
+    color: #111827;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.lang-btn.active {
+    background: #059669;
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.4);
+}
+
 /* Main Menu Dropdowns Bar */
 .menu-bar {
     display: flex;
