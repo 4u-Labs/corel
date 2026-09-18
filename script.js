@@ -36,7 +36,8 @@ const state = {
     isPowerClipping: false,
     powerClipTargetContent: null,
     isPickingPathForText: false,
-    targetTextForPath: null
+    targetTextForPath: null,
+    lastTransformDelta: { dx: 20, dy: 20 }
 };
 
 // Standard Corel Color Palette (40+ classic swatches)
@@ -871,6 +872,13 @@ function initCanvasEvents() {
         }
 
         if (state.activeTransform) {
+            if (state.activeTransform.type === 'move' &&
+               (Math.abs(state.activeTransform.dx || 0) > 1 || Math.abs(state.activeTransform.dy || 0) > 1)) {
+                state.lastTransformDelta = {
+                    dx: state.activeTransform.dx,
+                    dy: state.activeTransform.dy
+                };
+            }
             state.activeTransform = null;
             saveState('Transformar Objeto');
             renderSelectionOverlay();
@@ -1013,23 +1021,49 @@ function deleteSelected() {
     toast('Objeto(s) excluído(s)', 'ok');
 }
 
-function duplicateSelected() {
+function duplicateSelected(customDx, customDy) {
     if (state.selectedElements.length === 0) return;
+
+    const dx = (customDx !== undefined) ? customDx : (state.lastTransformDelta ? state.lastTransformDelta.dx : 20);
+    const dy = (customDy !== undefined) ? customDy : (state.lastTransformDelta ? state.lastTransformDelta.dy : 20);
+
+    state.lastTransformDelta = { dx, dy };
+
     const newSelected = [];
     state.selectedElements.forEach(el => {
         const clone = el.cloneNode(true);
-        if (clone.hasAttribute('x')) clone.setAttribute('x', (parseFloat(clone.getAttribute('x')) + 20).toString());
-        if (clone.hasAttribute('y')) clone.setAttribute('y', (parseFloat(clone.getAttribute('y')) + 20).toString());
-        if (clone.hasAttribute('cx')) clone.setAttribute('cx', (parseFloat(clone.getAttribute('cx')) + 20).toString());
-        if (clone.hasAttribute('cy')) clone.setAttribute('cy', (parseFloat(clone.getAttribute('cy')) + 20).toString());
+        if (clone.id) {
+            clone.id = `${clone.id}_copy_${Date.now().toString(36)}`;
+        }
+        if (clone.querySelectorAll) {
+            clone.querySelectorAll('[id]').forEach(child => {
+                child.id = `${child.id}_copy_${Date.now().toString(36)}`;
+            });
+        }
+        
+        moveSvgElement(clone, dx, dy);
         el.parentNode.appendChild(clone);
         newSelected.push(clone);
     });
+
     state.selectedElements = newSelected;
     renderSelectionOverlay();
     updateLayersTree();
+    updatePropertyBar();
     saveState('Duplicar');
-    toast('Objeto duplicado (+20px)', 'ok');
+
+    const signX = dx >= 0 ? `+${Math.round(dx)}` : `${Math.round(dx)}`;
+    const signY = dy >= 0 ? `+${Math.round(dy)}` : `${Math.round(dy)}`;
+    toast(`Objeto duplicado (${signX}px, ${signY}px)`, 'ok');
+}
+
+function repeatTransform() {
+    if (state.selectedElements.length === 0) {
+        toast('Selecione um objeto para repetir a duplicação/transformação.', 'info');
+        return;
+    }
+    const delta = state.lastTransformDelta || { dx: 20, dy: 20 };
+    duplicateSelected(delta.dx, delta.dy);
 }
 
 function renderSelectionOverlay() {
@@ -1180,6 +1214,8 @@ function handleTransformMove(e) {
     const dx = pt.x - startPt.x;
     const dy = pt.y - startPt.y;
     const handle = state.activeTransform.type;
+    state.activeTransform.dx = dx;
+    state.activeTransform.dy = dy;
 
     if (handle === 'move') {
         state.activeTransform.initialElementsData.forEach(item => {
@@ -3396,6 +3432,9 @@ function initKeyboardShortcuts() {
             } else if (e.key === 'd' || e.key === 'D') {
                 e.preventDefault();
                 duplicateSelected();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                repeatTransform();
             } else if (e.key === 'a' || e.key === 'A') {
                 e.preventDefault();
                 selectAll();

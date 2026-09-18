@@ -76,6 +76,7 @@ $baseDir = './';
                     <button type="button" class="dropdown-item" onclick="redo()"><i class="fas fa-redo"></i> Refazer <span class="shortcut">Ctrl+Y</span></button>
                     <div class="dropdown-separator"></div>
                     <button type="button" class="dropdown-item" onclick="duplicateSelected()"><i class="fas fa-clone"></i> Duplicar <span class="shortcut">Ctrl+D</span></button>
+                    <button type="button" class="dropdown-item" onclick="repeatTransform()"><i class="fas fa-redo text-amber-500"></i> Repetir / Duplicar com Passo <span class="shortcut">Ctrl+R</span></button>
                     <button type="button" class="dropdown-item" onclick="deleteSelected()"><i class="fas fa-trash"></i> Excluir <span class="shortcut">Delete</span></button>
                     <button type="button" class="dropdown-item" onclick="selectAll()"><i class="fas fa-object-group"></i> Selecionar Tudo <span class="shortcut">Ctrl+A</span></button>
                     <div class="dropdown-separator"></div>
@@ -314,6 +315,7 @@ $baseDir = './';
                     <button type="button" class="t-btn" onclick="alignSelected('E')" title="Centralizar Vertical (E)"><i class="fas fa-arrows-alt-v"></i></button>
                     <button type="button" class="t-btn" onclick="alignSelected('B')" title="Alinhar pela Base (B)"><i class="fas fa-arrow-down" style="font-size:10px;"></i></button>
                     <button type="button" class="t-btn" onclick="alignSelected('P')" title="Centralizar na Página (P)"><i class="fas fa-crosshairs text-blue-600"></i></button>
+                </div>
                 <div class="tool-sep"></div>
                 <!-- PowerClip Quick Buttons -->
                 <div class="toolbar-group">
@@ -324,6 +326,8 @@ $baseDir = './';
                     <button type="button" class="t-btn" onclick="openDropShadowDialog()" title="Sombra Projetada (Drop Shadow)"><i class="fas fa-cloud-moon text-indigo-600"></i></button>
                     <button type="button" class="t-btn" onclick="fitTextToPath()" title="Ajustar Texto ao Caminho (Curvar Texto)"><i class="fas fa-italic text-sky-600"></i></button>
                     <button type="button" class="t-btn" id="btnSepTextPath" onclick="separateTextFromPath()" style="display:none;" title="Separar Texto do Caminho"><i class="fas fa-unlink text-sky-600"></i></button>
+                    <button type="button" class="t-btn" onclick="duplicateSelected()" title="Duplicar Objeto (Ctrl+D)"><i class="fas fa-clone text-slate-700"></i></button>
+                    <button type="button" class="t-btn" onclick="repeatTransform()" title="Repetir / Duplicar com Passo (Ctrl+R)"><i class="fas fa-redo text-amber-500"></i></button>
                 </div>
                 <div class="tool-sep"></div>
                 <!-- PowerTRACE Action Button for Selected Bitmaps -->
