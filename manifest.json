@@ -1,0 +1,25 @@
+{
+  "name": "CorelClone Pro 2026",
+  "short_name": "CorelClone",
+  "description": "Editor Gráfico Vetorial Profissional",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#2a2d32",
+  "theme_color": "#1e2124",
+  "icons": [
+    {
+      "src": "corelicon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "corelicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

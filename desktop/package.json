@@ -1,0 +1,37 @@
+{
+  "name": "corelclone-pro",
+  "version": "2.0.0",
+  "description": "CorelClone Pro 2026 — Vector Graphics Editor for Windows, Mac and Linux",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --linux --windows"
+  },
+  "author": "4u Labs",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.fourulabs.corelclone",
+    "productName": "CorelClone Pro",
+    "directories": {
+      "output": "dist"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "../corelicon.png",
+      "category": "Graphics"
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "../corelicon.png"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "../corelicon.png",
+      "category": "public.app-category.graphics-design"
+    }
+  }
+}

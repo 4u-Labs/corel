@@ -4279,3 +4279,96 @@ function toast(msg, type = 'ok') {
         setTimeout(() => t.remove(), 250);
     }, 3500);
 }
+
+// ==================== Desktop Download & PWA Engine ====================
+let deferredInstallPrompt = null;
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(reg => {
+            console.log('[CorelClone] Service Worker registrado:', reg.scope);
+        }).catch(err => {
+            console.warn('[CorelClone] Service Worker falhou:', err);
+        });
+    });
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+});
+
+function installPWA() {
+    if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                toast('🎉 CorelClone Pro instalado como WebApp!', 'ok');
+            }
+            deferredInstallPrompt = null;
+        });
+    } else {
+        alert('💡 Para instalar como WebApp no seu computador:\n\n• No Google Chrome / Edge / Brave: Clique no ícone de instalar (computador com seta para baixo) na barra de endereços ao lado dos favoritos, ou clique nos três pontinhos no canto superior direito > "Instalar CorelClone Pro...".\n\n• No Safari (macOS / iPad): Clique em Compartilhar > "Adicionar à Tela de Início / Adicionar ao Dock".');
+    }
+}
+
+function detectUserOS() {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const platform = window.navigator?.userAgentData?.platform?.toLowerCase() || window.navigator.platform.toLowerCase();
+
+    if (platform.includes('win') || userAgent.includes('windows')) {
+        return 'windows';
+    }
+    if (platform.includes('mac') || userAgent.includes('macintosh') || userAgent.includes('mac os')) {
+        return 'mac';
+    }
+    if (platform.includes('linux') || userAgent.includes('linux') || userAgent.includes('x11')) {
+        return 'linux';
+    }
+    return 'unknown';
+}
+
+function openDownloadDesktopModal() {
+    const modal = document.getElementById('downloadDesktopModal');
+    if (!modal) return;
+
+    const os = detectUserOS();
+    const badge = document.getElementById('detectedOsBadge');
+    const cardWin = document.getElementById('cardWin');
+    const cardMac = document.getElementById('cardMac');
+    const cardLinux = document.getElementById('cardLinux');
+
+    // Reset styles
+    if (cardWin) cardWin.style.boxShadow = 'none';
+    if (cardMac) cardMac.style.boxShadow = 'none';
+    if (cardLinux) cardLinux.style.boxShadow = 'none';
+
+    if (os === 'windows') {
+        if (badge) badge.innerHTML = '<i class="fab fa-windows text-sky-600"></i> Seu sistema: Windows 10/11';
+        if (cardWin) {
+            cardWin.style.borderColor = '#0284c7';
+            cardWin.style.boxShadow = '0 0 0 2px #38bdf8';
+        }
+    } else if (os === 'mac') {
+        if (badge) badge.innerHTML = '<i class="fab fa-apple text-slate-800"></i> Seu sistema: Apple macOS';
+        if (cardMac) {
+            cardMac.style.borderColor = '#1e293b';
+            cardMac.style.boxShadow = '0 0 0 2px #94a3b8';
+        }
+    } else if (os === 'linux') {
+        if (badge) badge.innerHTML = '<i class="fab fa-linux text-amber-600"></i> Seu sistema: Linux (Zorin/Ubuntu)';
+        if (cardLinux) {
+            cardLinux.style.borderColor = '#d97706';
+            cardLinux.style.boxShadow = '0 0 0 2px #fbbf24';
+        }
+    } else {
+        if (badge) badge.innerHTML = '<i class="fas fa-laptop"></i> Escolha seu sistema abaixo';
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closeDownloadDesktopModal() {
+    const modal = document.getElementById('downloadDesktopModal');
+    if (modal) modal.style.display = 'none';
+}
