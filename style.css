@@ -606,6 +606,8 @@ body, html {
     right: 0;
     bottom: 0;
     overflow: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE e Edge */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -617,6 +619,12 @@ body, html {
         linear-gradient(-45deg, transparent 75%, #b5b5b5 75%);
     background-size: 24px 24px;
     background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+}
+
+.canvas-scroller::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 /* Page Board Sheet */
@@ -725,6 +733,25 @@ body, html {
     overflow-y: auto;
     background: #ffffff;
     padding: 2px 0;
+    scrollbar-width: thin;
+    scrollbar-color: #d8d8d8 transparent;
+}
+
+.objects-tree::-webkit-scrollbar {
+    width: 5px;
+}
+
+.objects-tree::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.objects-tree::-webkit-scrollbar-thumb {
+    background: #d8d8d8;
+    border-radius: 4px;
+}
+
+.objects-tree::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 
 .layer-tree-item {
@@ -1139,3 +1166,24 @@ body, html {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* Scrollbars Globais Modernas e Discretas */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #a3a3a3;
+}
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #d4d4d4 transparent;
+}
+
