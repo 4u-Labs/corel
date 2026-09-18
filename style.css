@@ -284,6 +284,32 @@ body, html {
     border-color: var(--corel-hover-border);
 }
 
+.t-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 26px;
+    padding: 0 10px;
+    background: #d97706;
+    color: #ffffff;
+    border: 1px solid #b45309;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.t-btn-primary:hover {
+    background: #b45309;
+    border-color: #92400e;
+}
+
+.t-btn-primary:active {
+    background: #92400e;
+}
+
 .zoom-dropdown-box {
     display: inline-flex;
     align-items: center;

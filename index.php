@@ -279,6 +279,11 @@ $baseDir = './';
                     <button type="button" class="t-btn" onclick="booleanOperation('trim')" title="Aparar (Trim)"><i class="fas fa-cut text-purple-600"></i></button>
                     <button type="button" class="t-btn" onclick="booleanOperation('intersect')" title="Interseção (Intersect)"><i class="fas fa-circle-notch text-emerald-600"></i></button>
                 </div>
+                <div class="tool-sep"></div>
+                <!-- PowerTRACE Action Button for Selected Bitmaps -->
+                <button type="button" class="t-btn-primary" id="btnTraceSelected" onclick="openPowerTraceDialog()" style="display:none; gap:5px; font-size:11px; padding:3px 9px; background:#d97706; border-color:#b45309;" title="PowerTRACE: Rastrear e Vetorizar esta Imagem">
+                    <i class="fas fa-bolt text-amber-200"></i> <span>Rastrear Bitmap</span>
+                </button>
             </div>
 
             <!-- Node Tool (F10) Properties -->
@@ -356,6 +361,10 @@ $baseDir = './';
             <!-- 12. Fill Tool -->
             <button type="button" class="tool-btn" id="toolBtn_fill" onclick="selectTool('fill')" title="Preenchimento Interativo (G)">
                 <i class="fas fa-fill-drip"></i>
+            </button>
+            <!-- 13. PowerTRACE (Vetorizar Bitmap) -->
+            <button type="button" class="tool-btn" id="toolBtn_trace" onclick="openPowerTraceDialog()" title="PowerTRACE™ — Vetorizar Bitmap / Logo (Curvas)">
+                <i class="fas fa-bolt text-amber-500"></i>
             </button>
 
             <!-- Toolbox Color Swatches (Base da Barra de Ferramentas Corel) -->
@@ -496,38 +505,101 @@ $baseDir = './';
 
 <!-- ==================== PowerTRACE™ Modal Dialog ==================== -->
 <div id="powertraceModal" class="modal-overlay" style="display:none;">
-    <div class="modal-card">
+    <div class="modal-card" style="width: 580px; max-width:95vw;">
         <div class="modal-header">
-            <div class="modal-title"><i class="fas fa-bolt text-amber-500"></i> PowerTRACE™ — Vetorizador de Bitmap</div>
+            <div class="modal-title"><i class="fas fa-bolt text-amber-500"></i> Corel PowerTRACE™ — Vetorizador de Bitmap</div>
             <button type="button" class="btn-win-ctl" onclick="closePowerTraceDialog()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
-            <p style="font-size:11.5px; color:#444; margin-bottom:12px;">Converta a imagem selecionada ou visualização do arquivo CorelDRAW (.CDR) em curvas vetoriais nativas SVG totalmente editáveis.</p>
-            <div style="display:flex; flex-direction:column; gap:8px;">
+            <!-- Área de Status / Miniatura da Imagem -->
+            <div id="traceImagePreviewArea" style="display:flex; gap:12px; align-items:center; padding:10px; border:1px solid #e0e0e0; border-radius:4px; background:#f9f9f9; margin-bottom:12px;">
+                <div id="traceThumbContainer" style="width:68px; height:68px; border:1px solid #ccc; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:3px; flex-shrink:0;">
+                    <img id="traceThumbImg" src="" style="max-width:100%; max-height:100%; object-fit:contain; display:none;">
+                    <i id="traceThumbPlaceholder" class="fas fa-image text-gray-400" style="font-size:26px;"></i>
+                </div>
+                <div style="flex:1; min-width:0;">
+                    <div id="traceImageTitle" style="font-weight:700; font-size:12px; color:#222;">Nenhuma imagem selecionada</div>
+                    <div id="traceImageSubtitle" style="font-size:11px; color:#666; margin-top:2px;">Selecione um bitmap na tela ou escolha uma imagem do seu computador para vetorizar em curvas.</div>
+                    <div style="margin-top:6px; display:flex; gap:8px;">
+                        <button type="button" class="btn-secondary" style="font-size:11px; padding:3px 9px;" onclick="document.getElementById('traceModalFileInput').click()">
+                            <i class="fas fa-folder-open text-amber-600"></i> Escolher Imagem (PNG/JPG/WEBP)...
+                        </button>
+                        <input type="file" id="traceModalFileInput" accept="image/*" style="display:none;" onchange="handleTraceModalFileUpload(this)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Presets de Rastreamento CorelDRAW -->
+            <div style="font-size:11.5px; font-weight:700; color:#333; margin-bottom:6px;">Modo de Rastreamento (Presets Corel):</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px;">
                 <label style="display:flex; gap:8px; align-items:flex-start; padding:8px; border:1px solid #ddd; border-radius:3px; background:#fafafa; cursor:pointer;">
-                    <input type="radio" name="tracePreset" value="posterized2" checked style="margin-top:3px;">
+                    <input type="radio" name="tracePreset" value="logo" checked style="margin-top:2px;" onchange="updateTracePresetControls()">
                     <div>
-                        <strong style="display:block; font-size:11.5px; color:#222;">Logotipo / Clipart (Recomendado)</strong>
-                        <span style="font-size:10.5px; color:#666;">Vetoriza preservando cores primárias e contornos suaves, perfeito para logos e artes Corel.</span>
+                        <strong style="display:block; font-size:11.5px; color:#222;">Logotipo / Clipart</strong>
+                        <span style="font-size:10.5px; color:#666;">Contornos nítidos e cores sólidas. Ideal para plotagem de recorte, serigrafia e logos.</span>
                     </div>
                 </label>
                 <label style="display:flex; gap:8px; align-items:flex-start; padding:8px; border:1px solid #ddd; border-radius:3px; background:#fafafa; cursor:pointer;">
-                    <input type="radio" name="tracePreset" value="detailed" style="margin-top:3px;">
+                    <input type="radio" name="tracePreset" value="lineart" style="margin-top:2px;" onchange="updateTracePresetControls()">
                     <div>
-                        <strong style="display:block; font-size:11.5px; color:#222;">Alta Fidelidade (Mais Cores)</strong>
-                        <span style="font-size:10.5px; color:#666;">Gera mais camadas de cores para ilustrações e fotos mais ricas.</span>
+                        <strong style="display:block; font-size:11.5px; color:#222;">Arte de Linha (P&B)</strong>
+                        <span style="font-size:10.5px; color:#666;">Alto contraste preto e branco. Para silhuetas, carimbos, desenhos e assinaturas.</span>
+                    </div>
+                </label>
+                <label style="display:flex; gap:8px; align-items:flex-start; padding:8px; border:1px solid #ddd; border-radius:3px; background:#fafafa; cursor:pointer;">
+                    <input type="radio" name="tracePreset" value="detailed" style="margin-top:2px;" onchange="updateTracePresetControls()">
+                    <div>
+                        <strong style="display:block; font-size:11.5px; color:#222;">Logotipo Detalhado</strong>
+                        <span style="font-size:10.5px; color:#666;">Maior precisão de curvas e formas para logos complexas com mais cores.</span>
+                    </div>
+                </label>
+                <label style="display:flex; gap:8px; align-items:flex-start; padding:8px; border:1px solid #ddd; border-radius:3px; background:#fafafa; cursor:pointer;">
+                    <input type="radio" name="tracePreset" value="photo" style="margin-top:2px;" onchange="updateTracePresetControls()">
+                    <div>
+                        <strong style="display:block; font-size:11.5px; color:#222;">Alta Fidelidade (Foto)</strong>
+                        <span style="font-size:10.5px; color:#666;">Mais camadas de cores para ilustrações e fotos multicoloridas.</span>
                     </div>
                 </label>
             </div>
-            <div style="margin-top:12px;">
-                <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:#333; cursor:pointer;">
+
+            <!-- Controles Adicionais -->
+            <div style="background:#f5f7fa; border:1px solid #e1e4e8; border-radius:4px; padding:10px; margin-bottom:12px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                    <label style="font-size:11px; font-weight:600; color:#333;">Número Máximo de Cores:</label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="range" id="traceNumColors" min="2" max="32" value="8" style="width:130px;" oninput="document.getElementById('traceNumColorsVal').textContent = this.value">
+                        <span id="traceNumColorsVal" style="font-size:11px; font-weight:700; width:22px; text-align:right;">8</span>
+                    </div>
+                </div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <label style="font-size:11px; font-weight:600; color:#333;">Nível de Suavização das Curvas:</label>
+                    <select id="traceSmoothness" class="corel-select" style="width:160px; font-size:11px;">
+                        <option value="high">Alta (Linhas Suaves / Plotter)</option>
+                        <option value="medium" selected>Média (Equilibrada)</option>
+                        <option value="low">Baixa (Mais Detalhes)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Opções CorelDRAW de Finalização -->
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:#222; cursor:pointer;">
+                    <input type="checkbox" id="traceRemoveBg" checked> <strong>Remover cor de fundo</strong> (descarta automaticamente fundo branco/claro da logo)
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:#222; cursor:pointer;">
                     <input type="checkbox" id="traceRemoveOriginal" checked> Remover imagem bitmap original após vetorização
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:#222; cursor:pointer;">
+                    <input type="checkbox" id="traceGroupResult" checked> Agrupar vetores gerados em um único objeto (Ctrl+G)
                 </label>
             </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn-secondary" onclick="closePowerTraceDialog()">Cancelar</button>
-            <button type="button" class="btn-primary" onclick="runPowerTrace()"><i class="fas fa-magic"></i> Rastrear e Gerar Vetores</button>
+            <button type="button" class="btn-primary" onclick="runPowerTrace()" style="background:#d97706; border-color:#b45309; padding:7px 16px;">
+                <i class="fas fa-magic"></i> Rastrear e Gerar Curvas Vetoriais
+            </button>
         </div>
     </div>
 </div>

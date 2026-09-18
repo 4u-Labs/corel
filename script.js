@@ -1271,10 +1271,12 @@ function updatePropertyBar() {
             if (hInput) hInput.value = Math.round(fromPxToUnit(bbox.height, state.unit));
         }
 
-        // Show/hide duplicate background toggle button
+        // Show/hide PowerTRACE and duplicate background toggle button
         const hasImg = state.selectedElements.some(el => el.querySelector && el.querySelector('image') || el.tagName.toLowerCase() === 'image');
         const btnBg = document.getElementById('btnToggleDuplicateBg');
         if (btnBg) btnBg.style.display = hasImg ? 'inline-flex' : 'none';
+        const btnTrace = document.getElementById('btnTraceSelected');
+        if (btnTrace) btnTrace.style.display = hasImg ? 'inline-flex' : 'none';
 
         // Update blend mode and opacity in right docker
         const first = state.selectedElements[0];
@@ -1290,6 +1292,8 @@ function updatePropertyBar() {
 
         const btnBg = document.getElementById('btnToggleDuplicateBg');
         if (btnBg) btnBg.style.display = 'none';
+        const btnTrace = document.getElementById('btnTraceSelected');
+        if (btnTrace) btnTrace.style.display = 'none';
     }
 }
 
@@ -1949,7 +1953,39 @@ function toggleImportedBgImage() {
 // ==================== PowerTRACE™ Engine ====================
 function openPowerTraceDialog() {
     const modal = document.getElementById('powertraceModal');
-    if (modal) modal.style.display = 'flex';
+    if (!modal) return;
+
+    // Localiza a imagem na seleção ou na prancheta
+    const selectedImg = state.selectedElements.find(el => el.tagName.toLowerCase() === 'image') ||
+                        (state.selectedElements[0] && state.selectedElements[0].querySelector && state.selectedElements[0].querySelector('image')) ||
+                        document.querySelector('#layerGroupMain image');
+
+    const thumbImg = document.getElementById('traceThumbImg');
+    const thumbPlaceholder = document.getElementById('traceThumbPlaceholder');
+    const titleEl = document.getElementById('traceImageTitle');
+    const subtitleEl = document.getElementById('traceImageSubtitle');
+
+    if (selectedImg) {
+        const url = selectedImg.getAttribute('href') || selectedImg.getAttribute('xlink:href');
+        if (thumbImg && url) {
+            thumbImg.src = url;
+            thumbImg.style.display = 'block';
+            if (thumbPlaceholder) thumbPlaceholder.style.display = 'none';
+        }
+        if (titleEl) titleEl.textContent = 'Imagem Selecionada (Pronta para Vetorizar)';
+        if (subtitleEl) {
+            const w = Math.round(parseFloat(selectedImg.getAttribute('width') || 0));
+            const h = Math.round(parseFloat(selectedImg.getAttribute('height') || 0));
+            subtitleEl.textContent = `Tamanho na prancheta: ${w} × ${h} px | Bitmap pronto para PowerTRACE.`;
+        }
+    } else {
+        if (thumbImg) thumbImg.style.display = 'none';
+        if (thumbPlaceholder) thumbPlaceholder.style.display = 'block';
+        if (titleEl) titleEl.textContent = 'Nenhuma imagem selecionada';
+        if (subtitleEl) subtitleEl.textContent = 'Escolha um arquivo do computador abaixo ou cole uma imagem com Ctrl+V na prancheta.';
+    }
+
+    modal.style.display = 'flex';
 }
 
 function closePowerTraceDialog() {
@@ -1957,67 +1993,217 @@ function closePowerTraceDialog() {
     if (modal) modal.style.display = 'none';
 }
 
+function updateTracePresetControls() {
+    const preset = document.querySelector('input[name="tracePreset"]:checked')?.value || 'logo';
+    const numColors = document.getElementById('traceNumColors');
+    const numColorsVal = document.getElementById('traceNumColorsVal');
+    const smoothness = document.getElementById('traceSmoothness');
+    const removeBg = document.getElementById('traceRemoveBg');
+
+    if (!numColors || !numColorsVal || !smoothness || !removeBg) return;
+
+    if (preset === 'logo') {
+        numColors.value = '8';
+        numColorsVal.textContent = '8';
+        smoothness.value = 'high';
+        removeBg.checked = true;
+    } else if (preset === 'lineart') {
+        numColors.value = '2';
+        numColorsVal.textContent = '2';
+        smoothness.value = 'medium';
+        removeBg.checked = true;
+    } else if (preset === 'detailed') {
+        numColors.value = '16';
+        numColorsVal.textContent = '16';
+        smoothness.value = 'medium';
+        removeBg.checked = true;
+    } else if (preset === 'photo') {
+        numColors.value = '32';
+        numColorsVal.textContent = '32';
+        smoothness.value = 'low';
+        removeBg.checked = false;
+    }
+}
+
+function handleTraceModalFileUpload(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const url = URL.createObjectURL(file);
+
+    importImageURL(url);
+
+    const thumbImg = document.getElementById('traceThumbImg');
+    const thumbPlaceholder = document.getElementById('traceThumbPlaceholder');
+    const titleEl = document.getElementById('traceImageTitle');
+    const subtitleEl = document.getElementById('traceImageSubtitle');
+
+    if (thumbImg) {
+        thumbImg.src = url;
+        thumbImg.style.display = 'block';
+        if (thumbPlaceholder) thumbPlaceholder.style.display = 'none';
+    }
+    if (titleEl) titleEl.textContent = `Imagem "${file.name}" Carregada`;
+    if (subtitleEl) subtitleEl.textContent = 'Imagem adicionada à prancheta e pronta para vetorização em curvas!';
+    toast(`Imagem "${file.name}" pronta para o PowerTRACE!`, 'ok');
+}
+
 function runPowerTrace() {
     if (typeof ImageTracer === 'undefined') {
-        alert('Motor ImageTracer não carregado.');
+        alert('Motor ImageTracer não carregado. Verifique a conexão.');
         return;
     }
 
     const selectedImg = state.selectedElements.find(el => el.tagName.toLowerCase() === 'image') ||
+                        (state.selectedElements[0] && state.selectedElements[0].querySelector && state.selectedElements[0].querySelector('image')) ||
                         document.querySelector('#layerGroupMain image');
 
     if (!selectedImg) {
-        alert('Selecione uma imagem para vetorizar com o PowerTRACE™.');
-        closePowerTraceDialog();
+        alert('Nenhuma imagem encontrada para vetorizar. Use o botão "Escolher Imagem" ou selecione uma imagem na prancheta.');
         return;
     }
 
     const imgUrl = selectedImg.getAttribute('href') || selectedImg.getAttribute('xlink:href');
-    if (!imgUrl) return;
+    if (!imgUrl) {
+        alert('Fonte da imagem inválida.');
+        return;
+    }
 
-    toast('⚡ Vetorizando imagem com o PowerTRACE™...', 'info');
+    // Leitura da geometria da imagem na prancheta
+    const imgX = parseFloat(selectedImg.getAttribute('x') || '0');
+    const imgY = parseFloat(selectedImg.getAttribute('y') || '0');
+    const imgW = parseFloat(selectedImg.getAttribute('width') || '100');
+    const imgH = parseFloat(selectedImg.getAttribute('height') || '100');
+    const imgTransform = selectedImg.getAttribute('transform') || '';
+
+    // Parâmetros configurados pelo usuário
+    const preset = document.querySelector('input[name="tracePreset"]:checked')?.value || 'logo';
+    const numColors = parseInt(document.getElementById('traceNumColors')?.value || '8', 10);
+    const smoothness = document.getElementById('traceSmoothness')?.value || 'medium';
+    const removeBg = document.getElementById('traceRemoveBg')?.checked ?? true;
+    const removeOrig = document.getElementById('traceRemoveOriginal')?.checked ?? true;
+    const groupResult = document.getElementById('traceGroupResult')?.checked ?? true;
+
+    // Mapeamento de tolerâncias de curvas e redução de ruído
+    let ltres = 1.0, qtres = 1.0, pathomit = 8;
+    if (smoothness === 'high') {
+        ltres = 1.5; qtres = 1.5; pathomit = 12;
+    } else if (smoothness === 'low') {
+        ltres = 0.5; qtres = 0.5; pathomit = 2;
+    }
+
+    if (preset === 'lineart') {
+        pathomit = Math.max(pathomit, 10);
+    }
+
+    toast('⚡ PowerTRACE™ processando vetorização em curvas...', 'info');
     closePowerTraceDialog();
 
     const options = {
         corsenabled: true,
-        ltres: 1,
-        qtres: 1,
-        pathomit: 8,
+        ltres: ltres,
+        qtres: qtres,
+        pathomit: pathomit,
         colorsampling: 2,
-        numberofcolors: 16,
-        colorquantcycles: 3
+        numberofcolors: numColors,
+        colorquantcycles: 3,
+        scale: 1
     };
 
     ImageTracer.imageToSVG(imgUrl, (svgstr) => {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(svgstr, 'image/svg+xml');
-        const svgEl = doc.querySelector('svg');
-        if (!svgEl) return;
-
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('class', 'powertraced-vector-group');
-        g.setAttribute('transform', selectedImg.getAttribute('transform') || '');
-
-        Array.from(svgEl.children).forEach(c => {
-            if (c.tagName.toLowerCase() === 'path') {
-                g.appendChild(c.cloneNode(true));
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgstr, 'image/svg+xml');
+            const svgEl = doc.querySelector('svg');
+            if (!svgEl) {
+                toast('Não foi possível gerar curvas para esta imagem.', 'err');
+                return;
             }
-        });
 
-        const parent = selectedImg.parentNode;
-        parent.appendChild(g);
+            // Dimensões nativas de renderização do ImageTracer
+            const nativeW = parseFloat(svgEl.getAttribute('width')) || imgW;
+            const nativeH = parseFloat(svgEl.getAttribute('height')) || imgH;
+            const scaleX = nativeW > 0 ? (imgW / nativeW) : 1;
+            const scaleY = nativeH > 0 ? (imgH / nativeH) : 1;
 
-        const removeOrig = document.getElementById('traceRemoveOriginal');
-        if (removeOrig && removeOrig.checked) {
-            selectedImg.remove();
+            const allPaths = Array.from(svgEl.querySelectorAll('path'));
+            if (allPaths.length === 0) {
+                toast('Nenhuma curva encontrada na imagem.', 'err');
+                return;
+            }
+
+            // Se solicitado, remove cor de fundo (geralmente o fundo branco/muito claro ou cobrindo 100% da área)
+            let pathsToInclude = allPaths;
+            if (removeBg && allPaths.length > 1) {
+                pathsToInclude = allPaths.filter((p, index) => {
+                    const fill = (p.getAttribute('fill') || '').toLowerCase().trim();
+                    const isWhiteish = fill === '#ffffff' || fill === '#fff' || fill === 'rgb(255,255,255)' ||
+                                       fill === '#fefefe' || fill === '#fafafa' || fill === '#f5f5f5';
+                    // Se for o primeiro path (fundo) e for branco ou quase branco, descarta
+                    if (index === 0 && isWhiteish) return false;
+                    // Se for branco e a área cobrir praticamente a imagem toda
+                    if (isWhiteish && allPaths.length > 3) {
+                        try {
+                            const d = p.getAttribute('d') || '';
+                            if (d.length < 150 && (d.includes(`0 0`) || d.includes(`${nativeW} ${nativeH}`))) {
+                                return false;
+                            }
+                        } catch {}
+                    }
+                    return true;
+                });
+            }
+
+            const layerGroup = document.getElementById('layerGroupMain');
+            const parent = selectedImg.parentNode || layerGroup;
+
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', 'powertraced-vector-group user-group');
+
+            // Encaixa os vetores perfeitamente no mesmo local e escala milimétrica do bitmap
+            const transformParts = [];
+            if (imgTransform) transformParts.push(imgTransform);
+            transformParts.push(`translate(${imgX.toFixed(2)}, ${imgY.toFixed(2)})`);
+            if (Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001) {
+                transformParts.push(`scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`);
+            }
+            g.setAttribute('transform', transformParts.join(' '));
+
+            pathsToInclude.forEach(p => {
+                const clonedPath = p.cloneNode(true);
+                // Garante que contorno inicial seja none
+                if (!clonedPath.hasAttribute('stroke')) clonedPath.setAttribute('stroke', 'none');
+                g.appendChild(clonedPath);
+            });
+
+            parent.insertBefore(g, selectedImg);
+
+            // Remove o bitmap original se o checkbox estiver ativo
+            if (removeOrig) {
+                selectedImg.remove();
+            }
+
+            // Se o usuário não quis agrupar, desagrupa os caminhos
+            if (!groupResult) {
+                Array.from(g.children).forEach(child => {
+                    parent.insertBefore(child, g);
+                });
+                g.remove();
+                state.selectedElements = pathsToInclude;
+            } else {
+                selectElement(g, false);
+            }
+
+            saveState('PowerTRACE: Vetorizar Bitmap');
+            updateLayersTree();
+            updatePropertyBar();
+            toast(`⚡ Vetorização concluída! ${pathsToInclude.length} curvas vetoriais nativas criadas com sucesso.`, 'ok');
+        } catch (traceErr) {
+            console.error('Erro no processamento do PowerTRACE:', traceErr);
+            toast('Erro ao processar as curvas do vetor.', 'err');
         }
-
-        selectElement(g, false);
-        saveState('PowerTRACE');
-        updateLayersTree();
-        toast('Imagem vetorizada em curvas nativas com sucesso!', 'ok');
     }, options);
 }
+
 
 // ==================== Boolean Modeling (Soldar, Aparar, Interseção) ====================
 function booleanOperation(op) {
@@ -2855,8 +3041,46 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             copySelected();
         } else if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
-            e.preventDefault();
-            pasteSelected();
+            // Se houver objetos internos copiados no CorelClone, cola eles
+            if (state.clipboard && state.clipboard.length > 0) {
+                e.preventDefault();
+                pasteSelected();
+            }
+            // Caso contrário, deixa o evento nativo 'paste' capturar se for imagem do SO/navegador
+        }
+    });
+
+    // Captura imagens coladas da área de transferência do Sistema Operacional / Navegador (Ctrl+V)
+    window.addEventListener('paste', (e) => {
+        const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea') return;
+
+        if (e.clipboardData && e.clipboardData.items) {
+            for (let i = 0; i < e.clipboardData.items.length; i++) {
+                const item = e.clipboardData.items[i];
+                if (item.type && item.type.indexOf('image') !== -1) {
+                    e.preventDefault();
+                    const blob = item.getAsFile();
+                    if (blob) {
+                        const url = URL.createObjectURL(blob);
+                        importImageURL(url);
+                        toast('📋 Imagem colada na prancheta! Clique em "Rastrear Bitmap" (⚡) para vetorizar.', 'ok');
+                        return;
+                    }
+                }
+            }
+        }
+    });
+
+    // Arraste e Solte (Drag & Drop) de arquivos de imagem e vetores diretamente na tela
+    window.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+    window.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            await handleImportFile(file);
         }
     });
 });
