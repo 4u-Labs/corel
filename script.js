@@ -2044,6 +2044,285 @@ function capitalize(s) {
     return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// ==================== Clipboard: Cut / Copy / Paste ====================
+function cutSelected() {
+    if (state.selectedElements.length === 0) {
+        toast('Nenhum objeto selecionado para recortar.', 'err');
+        return;
+    }
+    state.clipboard = state.selectedElements.map(el => el.cloneNode(true));
+    state.selectedElements.forEach(el => el.remove());
+    state.selectedElements = [];
+    renderSelectionOverlay();
+    updateLayersTree();
+    saveState('Recortar (Ctrl+X)');
+    toast(`${state.clipboard.length} objeto(s) recortado(s).`, 'ok');
+}
+
+function copySelected() {
+    if (state.selectedElements.length === 0) {
+        toast('Nenhum objeto selecionado para copiar.', 'err');
+        return;
+    }
+    state.clipboard = state.selectedElements.map(el => el.cloneNode(true));
+    toast(`${state.clipboard.length} objeto(s) copiado(s) para a área de transferência.`, 'ok');
+}
+
+function pasteSelected() {
+    if (!state.clipboard || state.clipboard.length === 0) {
+        toast('Área de transferência vazia. Use Copiar (Ctrl+C) primeiro.', 'err');
+        return;
+    }
+    const layerGroup = document.getElementById('layerGroupMain');
+    if (!layerGroup) return;
+
+    const newSelected = [];
+    state.clipboard = state.clipboard.map(el => {
+        const clone = el.cloneNode(true);
+        // Offset pasted elements by 20px so they don't overlap exactly
+        if (clone.hasAttribute('x')) clone.setAttribute('x', (parseFloat(clone.getAttribute('x')) + 20).toString());
+        if (clone.hasAttribute('y')) clone.setAttribute('y', (parseFloat(clone.getAttribute('y')) + 20).toString());
+        if (clone.hasAttribute('cx')) clone.setAttribute('cx', (parseFloat(clone.getAttribute('cx')) + 20).toString());
+        if (clone.hasAttribute('cy')) clone.setAttribute('cy', (parseFloat(clone.getAttribute('cy')) + 20).toString());
+        const existingT = clone.getAttribute('transform') || '';
+        if (!existingT && !clone.hasAttribute('x') && !clone.hasAttribute('cx')) {
+            clone.setAttribute('transform', `translate(20, 20)${existingT ? ' ' + existingT : ''}`);
+        }
+        layerGroup.appendChild(clone);
+        newSelected.push(clone);
+        return el.cloneNode(true); // keep clipboard alive for repeated Ctrl+V
+    });
+
+    state.selectedElements = newSelected;
+    renderSelectionOverlay();
+    updateLayersTree();
+    saveState('Colar (Ctrl+V)');
+    toast(`${newSelected.length} objeto(s) colado(s).`, 'ok');
+}
+
+// ==================== Color Pickers (Fill / Stroke) ====================
+function openFillColorPicker() {
+    const picker = document.createElement('input');
+    picker.type = 'color';
+    picker.value = state.activeFill && state.activeFill !== 'none'
+        ? (state.activeFill.startsWith('#') ? state.activeFill : '#000000')
+        : '#000000';
+    picker.style.display = 'none';
+    document.body.appendChild(picker);
+    picker.addEventListener('input', (e) => {
+        applyColorToSelection('fill', e.target.value);
+    });
+    picker.addEventListener('change', (e) => {
+        applyColorToSelection('fill', e.target.value);
+        picker.remove();
+    });
+    picker.click();
+}
+
+function openStrokeColorPicker() {
+    const picker = document.createElement('input');
+    picker.type = 'color';
+    picker.value = state.activeStroke && state.activeStroke !== 'none'
+        ? (state.activeStroke.startsWith('#') ? state.activeStroke : '#000000')
+        : '#000000';
+    picker.style.display = 'none';
+    document.body.appendChild(picker);
+    picker.addEventListener('input', (e) => {
+        applyColorToSelection('stroke', e.target.value);
+    });
+    picker.addEventListener('change', (e) => {
+        applyColorToSelection('stroke', e.target.value);
+        picker.remove();
+    });
+    picker.click();
+}
+
+// ==================== Node Tool (F10) Functions ====================
+
+// Parse SVG path "d" attribute into an array of command objects
+function parseSvgPathToNodes(d) {
+    if (!d) return [];
+    const tokens = d.trim().split(/[\s,]+|(?=[MmLlCcQqZz])/);
+    const nodes = [];
+    let currX = 0, currY = 0, startX = 0, startY = 0;
+    let i = 0;
+
+    while (i < tokens.length) {
+        const cmd = tokens[i];
+        if (/^[MmLlCcQqZz]$/.test(cmd)) {
+            i++;
+            if (cmd === 'M' || cmd === 'm') {
+                while (i + 1 < tokens.length && !/^[a-df-z]$/i.test(tokens[i])) {
+                    let x = parseFloat(tokens[i++]);
+                    let y = parseFloat(tokens[i++]);
+                    if (cmd === 'm') { x += currX; y += currY; }
+                    currX = x; currY = y;
+                    startX = x; startY = y;
+                    nodes.push({ cmd: 'M', x, y });
+                }
+            } else if (cmd === 'L' || cmd === 'l') {
+                while (i + 1 < tokens.length && !/^[a-df-z]$/i.test(tokens[i])) {
+                    let x = parseFloat(tokens[i++]);
+                    let y = parseFloat(tokens[i++]);
+                    if (cmd === 'l') { x += currX; y += currY; }
+                    currX = x; currY = y;
+                    nodes.push({ cmd: 'L', x, y });
+                }
+            } else if (cmd === 'C' || cmd === 'c') {
+                while (i + 5 < tokens.length && !/^[a-df-z]$/i.test(tokens[i])) {
+                    let x1 = parseFloat(tokens[i++]), y1 = parseFloat(tokens[i++]);
+                    let x2 = parseFloat(tokens[i++]), y2 = parseFloat(tokens[i++]);
+                    let x  = parseFloat(tokens[i++]), y  = parseFloat(tokens[i++]);
+                    if (cmd === 'c') { x1+=currX; y1+=currY; x2+=currX; y2+=currY; x+=currX; y+=currY; }
+                    currX = x; currY = y;
+                    nodes.push({ cmd: 'C', x, y, cp1: { x: x1, y: y1 }, cp2: { x: x2, y: y2 } });
+                }
+            } else if (cmd === 'Z' || cmd === 'z') {
+                nodes.push({ cmd: 'Z', x: startX, y: startY });
+                currX = startX; currY = startY;
+            }
+        } else {
+            i++;
+        }
+    }
+    return nodes;
+}
+
+function rebuildSvgPathFromNodes(nodes) {
+    let d = '';
+    nodes.forEach(n => {
+        if (n.cmd === 'M') d += `M ${n.x} ${n.y} `;
+        else if (n.cmd === 'L') d += `L ${n.x} ${n.y} `;
+        else if (n.cmd === 'C') d += `C ${n.cp1.x} ${n.cp1.y} ${n.cp2.x} ${n.cp2.y} ${n.x} ${n.y} `;
+        else if (n.cmd === 'Z') d += 'Z ';
+    });
+    return d.trim();
+}
+
+function enterNodeEditingForSelected() {
+    if (state.selectedElements.length === 0) return;
+    const el = state.selectedElements[0];
+    const tag = el.tagName.toLowerCase();
+    if (tag !== 'path') {
+        toast('Use Ctrl+Q para converter o objeto em Curvas Bézier antes de editar nós.', 'err');
+        return;
+    }
+    state.nodeEdit.activePath = el;
+    state.nodeEdit.nodes = parseSvgPathToNodes(el.getAttribute('d') || '');
+    state.nodeEdit.activeNodeIndex = 0;
+    renderNodeEditOverlay();
+}
+
+function renderNodeEditOverlay() {
+    const overlay = document.getElementById('nodeEditOverlay');
+    if (!overlay) return;
+    overlay.innerHTML = '';
+    const nodes = state.nodeEdit.nodes;
+    if (!nodes || nodes.length === 0) return;
+
+    nodes.forEach((n, idx) => {
+        if (n.cmd === 'Z') return;
+        const sq = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        sq.setAttribute('class', `node-anchor${idx === state.nodeEdit.activeNodeIndex ? ' active' : ''}`);
+        sq.setAttribute('x', (n.x - 4).toString());
+        sq.setAttribute('y', (n.y - 4).toString());
+        sq.setAttribute('width', '8');
+        sq.setAttribute('height', '8');
+        sq.style.cursor = 'move';
+        sq.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            state.nodeEdit.activeNodeIndex = idx;
+            renderNodeEditOverlay();
+        });
+        overlay.appendChild(sq);
+    });
+}
+
+function addNodeToSelectedPath() {
+    const nodes = state.nodeEdit.nodes;
+    if (!state.nodeEdit.activePath || !nodes || nodes.length === 0) {
+        toast('Selecione um caminho com a ferramenta Forma (F10) para adicionar um nó.', 'err');
+        return;
+    }
+    const idx = state.nodeEdit.activeNodeIndex;
+    const curr = nodes[idx] || nodes[0];
+    const next = nodes[(idx + 1) % nodes.length] || curr;
+    const midX = Math.round((curr.x + next.x) / 2);
+    const midY = Math.round((curr.y + next.y) / 2);
+    nodes.splice(idx + 1, 0, { cmd: 'L', x: midX, y: midY });
+    state.nodeEdit.activeNodeIndex = idx + 1;
+    state.nodeEdit.activePath.setAttribute('d', rebuildSvgPathFromNodes(nodes));
+    renderNodeEditOverlay();
+    saveState('Adicionar Nó');
+    toast('Nó adicionado no ponto médio!', 'ok');
+}
+
+function deleteSelectedNode() {
+    const nodes = state.nodeEdit.nodes;
+    if (!state.nodeEdit.activePath || !nodes || nodes.length <= 2) {
+        toast('Um caminho precisa de pelo menos 2 nós.', 'err');
+        return;
+    }
+    const idx = state.nodeEdit.activeNodeIndex;
+    if (idx < 0 || idx >= nodes.length) return;
+    nodes.splice(idx, 1);
+    state.nodeEdit.activeNodeIndex = Math.max(0, idx - 1);
+    state.nodeEdit.activePath.setAttribute('d', rebuildSvgPathFromNodes(nodes));
+    renderNodeEditOverlay();
+    saveState('Excluir Nó');
+    toast('Nó excluído!', 'ok');
+}
+
+function convertNodeToCurve() {
+    const nodes = state.nodeEdit.nodes;
+    if (!state.nodeEdit.activePath || !nodes) return;
+    const idx = state.nodeEdit.activeNodeIndex;
+    const cmd = nodes[idx];
+    if (!cmd || cmd.cmd === 'Z' || cmd.cmd === 'M') return;
+    const prev = nodes[idx - 1] || { x: cmd.x - 50, y: cmd.y };
+    cmd.cmd = 'C';
+    cmd.cp1 = { x: Math.round(prev.x + (cmd.x - prev.x) * 0.33), y: Math.round(prev.y - 20) };
+    cmd.cp2 = { x: Math.round(prev.x + (cmd.x - prev.x) * 0.66), y: Math.round(cmd.y + 20) };
+    state.nodeEdit.activePath.setAttribute('d', rebuildSvgPathFromNodes(nodes));
+    renderNodeEditOverlay();
+    saveState('Converter em Curva Bézier');
+    toast('Nó convertido em Curva Bézier suave!', 'ok');
+}
+
+function convertNodeToLine() {
+    const nodes = state.nodeEdit.nodes;
+    if (!state.nodeEdit.activePath || !nodes) return;
+    const idx = state.nodeEdit.activeNodeIndex;
+    const cmd = nodes[idx];
+    if (!cmd || cmd.cmd === 'Z' || cmd.cmd === 'M') return;
+    cmd.cmd = 'L';
+    delete cmd.cp1;
+    delete cmd.cp2;
+    state.nodeEdit.activePath.setAttribute('d', rebuildSvgPathFromNodes(nodes));
+    renderNodeEditOverlay();
+    saveState('Converter em Linha Reta');
+    toast('Nó convertido em segmento de linha reta!', 'ok');
+}
+
+// ==================== Keyboard shortcuts: also wire Ctrl+X/C/V ====================
+// (added to existing initKeyboardShortcuts; these are exposed here for completeness)
+document.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('keydown', (e) => {
+        const isInput = ['input', 'textarea', 'select'].includes(document.activeElement.tagName.toLowerCase());
+        if (isInput) return;
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X')) {
+            e.preventDefault();
+            cutSelected();
+        } else if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+            e.preventDefault();
+            copySelected();
+        } else if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+            e.preventDefault();
+            pasteSelected();
+        }
+    });
+});
+
 function toast(msg, type = 'ok') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
