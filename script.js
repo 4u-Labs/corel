@@ -487,6 +487,41 @@ function initCanvasEvents() {
         }
     });
 
+    // ---- Zoom via Ctrl+Scroll: aplica apenas na prancheta, bloqueia zoom do browser ----
+    scroller.addEventListener('wheel', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Ponto do mouse dentro do scroller (para manter o ponto focal)
+            const rect = scroller.getBoundingClientRect();
+            const mouseXInScroller = e.clientX - rect.left;
+            const mouseYInScroller = e.clientY - rect.top;
+            // Posição proporcional dentro do conteúdo antes do zoom
+            const ratioX = (scroller.scrollLeft + mouseXInScroller) / (scroller.scrollWidth  || 1);
+            const ratioY = (scroller.scrollTop  + mouseYInScroller) / (scroller.scrollHeight || 1);
+
+            const delta = e.deltaY < 0 ? 1.1 : (1 / 1.1);
+            const newZoom = Math.max(0.05, Math.min(state.zoom * delta, 8.0));
+            setZoom(newZoom);
+
+            // Reposicionar scroll para manter o ponto focal sob o cursor
+            requestAnimationFrame(() => {
+                scroller.scrollLeft = ratioX * scroller.scrollWidth  - mouseXInScroller;
+                scroller.scrollTop  = ratioY * scroller.scrollHeight - mouseYInScroller;
+            });
+
+            // Atualiza o select de zoom para refletir o valor atual
+            const sel = document.getElementById('zoomSelect');
+            if (sel) sel.value = '';
+            const pct = Math.round(newZoom * 100);
+            const statusZ = document.getElementById('statusZoom');
+            if (statusZ) statusZ.querySelector('span').textContent = `Zoom: ${pct}%`;
+        }
+    }, { passive: false });
+
+
+
     // Mouse Down
     svg.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return; // Only main left click
@@ -1936,9 +1971,35 @@ function ungroupSelected() {
 
 // ==================== Keyboard Shortcuts ====================
 function initKeyboardShortcuts() {
+    // ---- Bloquear zoom nativo do browser em toda a janela ----
+    window.addEventListener('wheel', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault(); // bloqueia Ctrl+Scroll do browser
+        }
+    }, { passive: false });
+
     window.addEventListener('keydown', (e) => {
         const isInput = ['input', 'textarea', 'select'].includes(document.activeElement.tagName.toLowerCase());
         if (isInput) return;
+
+        // Bloquear Ctrl+= e Ctrl+- e Ctrl+0 nativos do browser e redirecionar para setZoom
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === '=' || e.key === '+') {
+                e.preventDefault();
+                setZoom(Math.min(state.zoom * 1.25, 8.0));
+                return;
+            }
+            if (e.key === '-' || e.key === '_') {
+                e.preventDefault();
+                setZoom(Math.max(state.zoom / 1.25, 0.05));
+                return;
+            }
+            if (e.key === '0') {
+                e.preventDefault();
+                zoomFitPage();
+                return;
+            }
+        }
 
         // Delete
         if (e.key === 'Delete' || e.key === 'Backspace') {
