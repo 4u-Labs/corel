@@ -997,23 +997,65 @@ function renderSelectionOverlay() {
 
 function getCombinedBBox(elements) {
     if (elements.length === 0) return null;
+    const mainSvg = document.getElementById('mainSvgCanvas');
+    if (!mainSvg) return null;
+
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
     elements.forEach(el => {
         try {
-            const b = el.getBBox();
-            if (b.width > 0 && b.height > 0) {
+            const b = el.getBBox(); // bbox em coords locais do elemento
+            if (b.width <= 0 && b.height <= 0) return;
+
+            // Obter a matriz de transformação do elemento em relação ao SVG root
+            const svgCTM = mainSvg.getScreenCTM();
+            const elCTM  = el.getScreenCTM();
+            if (!svgCTM || !elCTM) {
+                // Fallback simples se CTM não estiver disponível
                 minX = Math.min(minX, b.x);
                 minY = Math.min(minY, b.y);
                 maxX = Math.max(maxX, b.x + b.width);
                 maxY = Math.max(maxY, b.y + b.height);
+                return;
             }
-        } catch {}
+
+            // Converter as 4 esquinas da bbox local para o espaço do SVG root
+            const inverseSvgCTM = svgCTM.inverse();
+            const toSvg = inverseSvgCTM.multiply(elCTM);
+
+            const corners = [
+                { x: b.x,           y: b.y },
+                { x: b.x + b.width, y: b.y },
+                { x: b.x + b.width, y: b.y + b.height },
+                { x: b.x,           y: b.y + b.height }
+            ];
+
+            corners.forEach(corner => {
+                const pt = mainSvg.createSVGPoint();
+                pt.x = corner.x;
+                pt.y = corner.y;
+                const transformed = pt.matrixTransform(toSvg);
+                minX = Math.min(minX, transformed.x);
+                minY = Math.min(minY, transformed.y);
+                maxX = Math.max(maxX, transformed.x);
+                maxY = Math.max(maxY, transformed.y);
+            });
+        } catch (err) {
+            // Fallback se getBBox falhar (ex: elemento oculto)
+            try {
+                const b = el.getBBox();
+                minX = Math.min(minX, b.x);
+                minY = Math.min(minY, b.y);
+                maxX = Math.max(maxX, b.x + b.width);
+                maxY = Math.max(maxY, b.y + b.height);
+            } catch {}
+        }
     });
 
     if (minX === Infinity) return { x: 0, y: 0, width: 0, height: 0 };
     return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
+
 
 function initTransformDrag(e, handleType) {
     const pt = getSvgCoords(e);
