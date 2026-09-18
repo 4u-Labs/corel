@@ -100,7 +100,15 @@ $baseDir = './';
                     <button type="button" class="dropdown-item" onclick="ungroupSelected()"><i class="fas fa-object-ungroup"></i> Desagrupar <span class="shortcut">Ctrl+U</span></button>
                     <div class="dropdown-separator"></div>
                     <button type="button" class="dropdown-item" onclick="convertSelectedToCurves()"><i class="fas fa-bezier-curve"></i> Converter em Curvas <span class="shortcut">Ctrl+Q</span></button>
-                    <button type="button" class="dropdown-item" onclick="centerSelectedInPage()"><i class="fas fa-crosshairs"></i> Centralizar na Página <span class="shortcut">P</span></button>
+                    <div class="dropdown-separator"></div>
+                    <!-- CorelDRAW Align & Distribute -->
+                    <button type="button" class="dropdown-item" onclick="alignSelected('P')"><i class="fas fa-crosshairs text-blue-600"></i> Centralizar na Página <span class="shortcut">P</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('C')"><i class="fas fa-arrows-alt-h text-cyan-600"></i> Centralizar Horizontal <span class="shortcut">C</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('E')"><i class="fas fa-arrows-alt-v text-cyan-600"></i> Centralizar Vertical <span class="shortcut">E</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('L')"><i class="fas fa-align-left"></i> Alinhar à Esquerda <span class="shortcut">L</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('R')"><i class="fas fa-align-right"></i> Alinhar à Direita <span class="shortcut">R</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('T')"><i class="fas fa-arrow-up"></i> Alinhar pelo Topo <span class="shortcut">T</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('B')"><i class="fas fa-arrow-down"></i> Alinhar pela Base <span class="shortcut">B</span></button>
                     <div class="dropdown-separator"></div>
                     <button type="button" class="dropdown-item" onclick="orderSelected('front')"><i class="fas fa-angle-double-up"></i> Trazer para Frente <span class="shortcut">Shift+PgUp</span></button>
                     <button type="button" class="dropdown-item" onclick="orderSelected('back')"><i class="fas fa-angle-double-down"></i> Enviar para Trás <span class="shortcut">Shift+PgDn</span></button>
@@ -278,6 +286,17 @@ $baseDir = './';
                     <button type="button" class="t-btn" onclick="booleanOperation('weld')" title="Soldar (Weld)"><i class="fas fa-layer-group text-blue-600"></i></button>
                     <button type="button" class="t-btn" onclick="booleanOperation('trim')" title="Aparar (Trim)"><i class="fas fa-cut text-purple-600"></i></button>
                     <button type="button" class="t-btn" onclick="booleanOperation('intersect')" title="Interseção (Intersect)"><i class="fas fa-circle-notch text-emerald-600"></i></button>
+                </div>
+                <div class="tool-sep"></div>
+                <!-- Corel Align Buttons -->
+                <div class="toolbar-group" title="Alinhamento Rápido Corel (Atalhos: C, E, L, R, T, B, P)">
+                    <button type="button" class="t-btn" onclick="alignSelected('L')" title="Alinhar à Esquerda (L)"><i class="fas fa-align-left"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('C')" title="Centralizar Horizontal (C)"><i class="fas fa-arrows-alt-h"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('R')" title="Alinhar à Direita (R)"><i class="fas fa-align-right"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('T')" title="Alinhar pelo Topo (T)"><i class="fas fa-arrow-up" style="font-size:10px;"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('E')" title="Centralizar Vertical (E)"><i class="fas fa-arrows-alt-v"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('B')" title="Alinhar pela Base (B)"><i class="fas fa-arrow-down" style="font-size:10px;"></i></button>
+                    <button type="button" class="t-btn" onclick="alignSelected('P')" title="Centralizar na Página (P)"><i class="fas fa-crosshairs text-blue-600"></i></button>
                 </div>
                 <div class="tool-sep"></div>
                 <!-- PowerTRACE Action Button for Selected Bitmaps -->

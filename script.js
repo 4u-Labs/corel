@@ -2407,38 +2407,131 @@ function orderSelected(dir) {
     saveState(`Ordem: ${dir}`);
 }
 
+// ==================== Universal SVG Element Mover ====================
+function moveSvgElement(el, dx, dy) {
+    if (Math.abs(dx) < 0.0001 && Math.abs(dy) < 0.0001) return;
+    const tag = el.tagName.toLowerCase();
+    const hasTransform = el.hasAttribute('transform') && el.getAttribute('transform').trim() !== '';
+
+    if (!hasTransform) {
+        if (tag === 'rect' || tag === 'image') {
+            el.setAttribute('x', (parseFloat(el.getAttribute('x') || 0) + dx).toString());
+            el.setAttribute('y', (parseFloat(el.getAttribute('y') || 0) + dy).toString());
+            return;
+        }
+        if (tag === 'circle' || tag === 'ellipse') {
+            el.setAttribute('cx', (parseFloat(el.getAttribute('cx') || 0) + dx).toString());
+            el.setAttribute('cy', (parseFloat(el.getAttribute('cy') || 0) + dy).toString());
+            return;
+        }
+        if (tag === 'text') {
+            el.setAttribute('x', (parseFloat(el.getAttribute('x') || 0) + dx).toString());
+            el.setAttribute('y', (parseFloat(el.getAttribute('y') || 0) + dy).toString());
+            return;
+        }
+    }
+
+    // Para paths, polígonos, grupos ou elementos com transform existente
+    const currentT = el.getAttribute('transform') || '';
+    const translateMatch = currentT.match(/translate\(\s*([-\d.]+)(?:[\s,]+([-\d.]+))?\s*\)/);
+    if (translateMatch) {
+        const curX = parseFloat(translateMatch[1]) || 0;
+        const curY = parseFloat(translateMatch[2] || 0);
+        const newX = curX + dx;
+        const newY = curY + dy;
+        const newT = currentT.replace(/translate\(\s*[-\d.]+(?:[\s,]+[-\d.]+)?\s*\)/, `translate(${newX.toFixed(2)}, ${newY.toFixed(2)})`);
+        el.setAttribute('transform', newT);
+    } else {
+        el.setAttribute('transform', `translate(${dx.toFixed(2)}, ${dy.toFixed(2)}) ${currentT}`.trim());
+    }
+}
+
+// ==================== CorelDRAW Alignment Engine (C, E, L, R, T, B, P) ====================
 function alignSelected(type) {
-    if (state.selectedElements.length === 0) return;
+    if (state.selectedElements.length === 0) {
+        toast('Selecione um ou mais objetos para alinhar.', 'info');
+        return;
+    }
+    type = type.toUpperCase();
+
+    // 1. Centralizar na Página (P)
+    if (type === 'P' || type === 'CENTER') {
+        const bbox = getCombinedBBox(state.selectedElements);
+        if (!bbox) return;
+        const targetX = (state.docWidth - bbox.width) / 2;
+        const targetY = (state.docHeight - bbox.height) / 2;
+        const dx = targetX - bbox.x;
+        const dy = targetY - bbox.y;
+        state.selectedElements.forEach(el => moveSvgElement(el, dx, dy));
+        renderSelectionOverlay();
+        updatePropertyBar();
+        saveState('Centralizar na Página (P)');
+        toast('Seleção centralizada na página (P)', 'ok');
+        return;
+    }
+
+    // 2. Se tiver apenas 1 objeto selecionado: alinha em relação à página A4
+    if (state.selectedElements.length === 1) {
+        const el = state.selectedElements[0];
+        const b = getCombinedBBox([el]);
+        if (!b) return;
+        let dx = 0, dy = 0;
+
+        if (type === 'C') dx = ((state.docWidth - b.width) / 2) - b.x;
+        else if (type === 'E') dy = ((state.docHeight - b.height) / 2) - b.y;
+        else if (type === 'L') dx = 0 - b.x;
+        else if (type === 'R') dx = (state.docWidth - b.width) - b.x;
+        else if (type === 'T') dy = 0 - b.y;
+        else if (type === 'B') dy = (state.docHeight - b.height) - b.y;
+
+        moveSvgElement(el, dx, dy);
+        renderSelectionOverlay();
+        updatePropertyBar();
+        saveState(`Alinhar (${type})`);
+        toast(`Objeto alinhado à folha (${type})`, 'ok');
+        return;
+    }
+
+    // 3. Múltiplos objetos: o ÚLTIMO elemento selecionado é a âncora/referência (padrão CorelDRAW)
+    const anchorEl = state.selectedElements[state.selectedElements.length - 1];
+    const anchorBox = getCombinedBBox([anchorEl]);
+    if (!anchorBox) return;
+
+    const anchorCenterX = anchorBox.x + anchorBox.width / 2;
+    const anchorCenterY = anchorBox.y + anchorBox.height / 2;
+
     state.selectedElements.forEach(el => {
-        const b = el.getBBox();
-        let targetX = b.x;
-        let targetY = b.y;
+        if (el === anchorEl) return; // A âncora permanece no lugar
+        const b = getCombinedBBox([el]);
+        if (!b) return;
+        let dx = 0, dy = 0;
 
-        if (type === 'center') {
-            targetX = (state.docWidth - b.width) / 2;
-            targetY = (state.docHeight - b.height) / 2;
+        if (type === 'C') { // Centralizar Horizontal
+            dx = anchorCenterX - (b.x + b.width / 2);
+        } else if (type === 'E') { // Centralizar Vertical (Equidistante)
+            dy = anchorCenterY - (b.y + b.height / 2);
+        } else if (type === 'L') { // Esquerda
+            dx = anchorBox.x - b.x;
+        } else if (type === 'R') { // Direita
+            dx = (anchorBox.x + anchorBox.width) - (b.x + b.width);
+        } else if (type === 'T') { // Topo
+            dy = anchorBox.y - b.y;
+        } else if (type === 'B') { // Base
+            dy = (anchorBox.y + anchorBox.height) - (b.y + b.height);
         }
 
-        const dx = targetX - b.x;
-        const dy = targetY - b.y;
-
-        if (el.hasAttribute('x')) el.setAttribute('x', targetX.toString());
-        if (el.hasAttribute('y')) el.setAttribute('y', targetY.toString());
-        if (el.hasAttribute('cx')) el.setAttribute('cx', (targetX + b.width / 2).toString());
-        if (el.hasAttribute('cy')) el.setAttribute('cy', (targetY + b.height / 2).toString());
-        if (!el.hasAttribute('x') && !el.hasAttribute('cx')) {
-            el.setAttribute('transform', `translate(${dx}, ${dy})`);
-        }
+        moveSvgElement(el, dx, dy);
     });
 
     renderSelectionOverlay();
     updatePropertyBar();
-    saveState('Alinhar');
-    toast('Objeto centralizado na página (P)', 'ok');
+    saveState(`Alinhar (${type})`);
+    const names = { C: 'Centro Horizontal (C)', E: 'Centro Vertical (E)', L: 'Esquerda (L)', R: 'Direita (R)', T: 'Topo (T)', B: 'Base (B)' };
+    toast(`Objetos alinhados por ${names[type] || type}!`, 'ok');
 }
 
 function centerSelectedInPage() {
-    alignSelected('center');
+    alignSelected('P');
 }
 
 function convertSelectedToCurves() {
@@ -2603,12 +2696,16 @@ function initKeyboardShortcuts() {
         } else if (e.key === 'F4') {
             e.preventDefault();
             zoomFitPage();
-        } else if (e.key === 'p' || e.key === 'P') {
-            e.preventDefault();
-            centerSelectedInPage();
         } else if (e.key === ' ') {
             e.preventDefault();
             selectTool('select');
+        } else if (state.selectedElements.length > 0 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            // CorelDRAW Instant Align Shortcuts (P, C, E, L, R, T, B)
+            const k = e.key.toUpperCase();
+            if (['P', 'C', 'E', 'L', 'R', 'T', 'B'].includes(k)) {
+                e.preventDefault();
+                alignSelected(k);
+            }
         }
     });
 }
