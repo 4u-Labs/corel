@@ -30,7 +30,9 @@ const state = {
     panStart: { x: 0, y: 0 },
     scrollStart: { left: 0, top: 0 },
     activeTransform: null,
-    nodeEdit: { activePath: null, nodes: [], activeNodeIndex: -1 }
+    nodeEdit: { activePath: null, nodes: [], activeNodeIndex: -1 },
+    penPath: null,
+    penPoints: []
 };
 
 // Standard Corel Color Palette (40+ classic swatches)
@@ -554,7 +556,86 @@ function initCanvasEvents() {
             return;
         }
 
-        // 3. Drawing Tools Mode
+        // 3. Node Edit Tool (F10)
+        if (state.activeTool === 'node') {
+            const target = e.target;
+            if (target && target.closest('#layerGroupMain')) {
+                const el = target.closest('#layerGroupMain > *');
+                if (el) {
+                    selectElement(el, false);
+                    enterNodeEditingForSelected();
+                }
+            }
+            return;
+        }
+
+        // 4. Crop Tool — desenha um retângulo de recorte e corta o objeto selecionado
+        if (state.activeTool === 'crop') {
+            state.isDrawing = true;
+            // Usa um retângulo visual temporário para mostrar área de crop
+            let cropRect = document.getElementById('_cropPreview');
+            if (!cropRect) {
+                cropRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                cropRect.setAttribute('id', '_cropPreview');
+                cropRect.setAttribute('fill', 'rgba(0,100,255,0.10)');
+                cropRect.setAttribute('stroke', '#0066cc');
+                cropRect.setAttribute('stroke-width', '1');
+                cropRect.setAttribute('stroke-dasharray', '5,3');
+                svg.appendChild(cropRect);
+            }
+            cropRect.setAttribute('x', pt.x.toString());
+            cropRect.setAttribute('y', pt.y.toString());
+            cropRect.setAttribute('width', '1');
+            cropRect.setAttribute('height', '1');
+            state.currentElement = cropRect;
+            return;
+        }
+
+        // 5. Fill Bucket — aplica a cor de preenchimento ativa ao objeto clicado
+        if (state.activeTool === 'fill') {
+            const target = e.target;
+            if (target && target.closest('#layerGroupMain')) {
+                const el = target.closest('#layerGroupMain > *');
+                if (el) {
+                    el.setAttribute('fill', state.activeFill !== 'none' ? state.activeFill : '#000000');
+                    saveState('Preenchimento Interativo');
+                    toast('Cor de preenchimento aplicada!', 'ok');
+                } else {
+                    toast('Clique sobre um objeto para aplicar o preenchimento.', 'err');
+                }
+            }
+            return;
+        }
+
+        // 6. Pen Tool (Bézier por cliques) — acumula pontos no mesmo path
+        if (state.activeTool === 'pen') {
+            const layerGroup = document.getElementById('layerGroupMain');
+            const stroke = state.activeStroke !== 'none' ? state.activeStroke : '#000000';
+            const sw = state.strokeWidth;
+
+            if (!state.penPath) {
+                // Inicia um novo caminho
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', `M ${Math.round(pt.x)} ${Math.round(pt.y)}`);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', stroke);
+                path.setAttribute('stroke-width', sw.toString());
+                path.setAttribute('stroke-linecap', 'round');
+                path.setAttribute('stroke-linejoin', 'round');
+                layerGroup.appendChild(path);
+                state.penPath = path;
+                state.penPoints = [{ x: pt.x, y: pt.y }];
+                toast('Clique para adicionar pontos. Duplo clique ou Enter para fechar o caminho.', 'ok');
+            } else {
+                // Adiciona ponto ao caminho existente
+                const d = state.penPath.getAttribute('d') || '';
+                state.penPath.setAttribute('d', `${d} L ${Math.round(pt.x)} ${Math.round(pt.y)}`);
+                state.penPoints.push({ x: pt.x, y: pt.y });
+            }
+            return;
+        }
+
+        // 7. Drawing Tools (Brush, Rect, Ellipse, Star) — drag to draw
         state.isDrawing = true;
         const layerGroup = document.getElementById('layerGroupMain');
         const fill = state.activeFill;
@@ -591,12 +672,12 @@ function initCanvasEvents() {
             poly.setAttribute('stroke-width', sw.toString());
             layerGroup.appendChild(poly);
             state.currentElement = poly;
-        } else if (state.activeTool === 'brush' || state.activeTool === 'pen') {
+        } else if (state.activeTool === 'brush') {
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             path.setAttribute('d', `M ${pt.x} ${pt.y}`);
             path.setAttribute('fill', 'none');
             path.setAttribute('stroke', stroke !== 'none' ? stroke : '#000000');
-            path.setAttribute('stroke-width', (state.activeTool === 'brush' ? 4 : sw).toString());
+            path.setAttribute('stroke-width', '4');
             path.setAttribute('stroke-linecap', 'round');
             path.setAttribute('stroke-linejoin', 'round');
             layerGroup.appendChild(path);
@@ -619,14 +700,43 @@ function initCanvasEvents() {
             selectTool('select');
         } else if (state.activeTool === 'eyedropper') {
             const target = e.target;
-            if (target && target.getAttribute('fill') && target.getAttribute('fill') !== 'none') {
-                applyColorToSelection('fill', target.getAttribute('fill'));
-            } else if (target && target.getAttribute('stroke') && target.getAttribute('stroke') !== 'none') {
-                applyColorToSelection('fill', target.getAttribute('stroke'));
+            if (target) {
+                const f = target.getAttribute('fill');
+                const s = target.getAttribute('stroke');
+                if (f && f !== 'none' && f !== 'transparent') {
+                    applyColorToSelection('fill', f);
+                    state.activeFill = f;
+                    const fw = document.getElementById('fillColorWell');
+                    if (fw) fw.style.background = f;
+                    toast(`Cor capturada: ${f}`, 'ok');
+                } else if (s && s !== 'none') {
+                    applyColorToSelection('stroke', s);
+                    state.activeStroke = s;
+                    toast(`Cor de contorno capturada: ${s}`, 'ok');
+                } else {
+                    toast('Clique sobre um objeto colorido para capturar a cor.', 'err');
+                }
             }
             selectTool('select');
         }
     });
+
+    // Duplo clique na prancheta — fecha o caminho da ferramenta Pen
+    svg.addEventListener('dblclick', (e) => {
+        if (state.activeTool === 'pen' && state.penPath) {
+            const d = state.penPath.getAttribute('d') || '';
+            if (state.penPoints && state.penPoints.length > 2) {
+                state.penPath.setAttribute('d', `${d} Z`); // fecha o caminho
+            }
+            selectElement(state.penPath, false);
+            saveState('Criar Caminho Bézier');
+            state.penPath = null;
+            state.penPoints = [];
+            selectTool('select');
+        }
+    });
+
+
 
     // Mouse Move
     window.addEventListener('mousemove', (e) => {
@@ -2089,12 +2199,42 @@ function initKeyboardShortcuts() {
             }
         }
 
+        // Enter — fecha o caminho da Caneta Bézier
+        if (e.key === 'Enter') {
+            if (state.activeTool === 'pen' && state.penPath) {
+                e.preventDefault();
+                const d = state.penPath.getAttribute('d') || '';
+                if (state.penPoints && state.penPoints.length > 2) {
+                    state.penPath.setAttribute('d', `${d} Z`);
+                }
+                selectElement(state.penPath, false);
+                saveState('Criar Caminho Bézier');
+                state.penPath = null;
+                state.penPoints = [];
+                selectTool('select');
+            }
+            return;
+        }
+
+        // Escape — cancela ferramenta ativa ou deseleciona
+        if (e.key === 'Escape') {
+            if (state.activeTool === 'pen' && state.penPath) {
+                state.penPath.remove();
+                state.penPath = null;
+                state.penPoints = [];
+            }
+            deselectAll();
+            selectTool('select');
+            return;
+        }
+
         // Delete
         if (e.key === 'Delete' || e.key === 'Backspace') {
             e.preventDefault();
             deleteSelected();
             return;
         }
+
 
         // Ctrl Combinations
         if (e.ctrlKey || e.metaKey) {
