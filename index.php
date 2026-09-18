@@ -114,6 +114,10 @@ $baseDir = './';
                     <button type="button" class="dropdown-item" onclick="alignSelected('T')"><i class="fas fa-arrow-up"></i> Alinhar pelo Topo <span class="shortcut">T</span></button>
                     <button type="button" class="dropdown-item" onclick="alignSelected('B')"><i class="fas fa-arrow-down"></i> Alinhar pela Base <span class="shortcut">B</span></button>
                     <div class="dropdown-separator"></div>
+                    <!-- CorelDRAW Espelhar / Flip -->
+                    <button type="button" class="dropdown-item" onclick="flipSelected('horizontal')"><i class="fas fa-arrows-alt-h text-indigo-600"></i> Espelhar Horizontalmente</button>
+                    <button type="button" class="dropdown-item" onclick="flipSelected('vertical')"><i class="fas fa-arrows-alt-v text-indigo-600"></i> Espelhar Verticalmente</button>
+                    <div class="dropdown-separator"></div>
                     <!-- PowerClip CorelDRAW -->
                     <button type="button" class="dropdown-item" onclick="applyPowerClip()"><i class="fas fa-sign-in-alt text-amber-600"></i> PowerClip: Colocar no Recipiente...</button>
                     <button type="button" class="dropdown-item" onclick="extractPowerClip()"><i class="fas fa-sign-out-alt text-amber-600"></i> PowerClip: Extrair Conteúdo</button>
@@ -297,6 +301,10 @@ $baseDir = './';
                     <label><i class="fas fa-redo-alt"></i></label>
                     <input type="number" id="objPropRotate" class="prop-input" style="width:50px;" value="0" onchange="updateSelectedTransformFromProp()">
                     <span style="font-size:10px; color:#666;">°</span>
+                </div>
+                <div class="toolbar-group" title="Espelhamento CorelDRAW">
+                    <button type="button" class="t-btn" onclick="flipSelected('horizontal')" title="Espelhar Horizontalmente"><i class="fas fa-arrows-alt-h text-indigo-600"></i></button>
+                    <button type="button" class="t-btn" onclick="flipSelected('vertical')" title="Espelhar Verticalmente"><i class="fas fa-arrows-alt-v text-indigo-600"></i></button>
                 </div>
                 <div class="tool-sep"></div>
                 <!-- Boolean Modeling -->

@@ -2628,6 +2628,37 @@ function centerSelectedInPage() {
     alignSelected('P');
 }
 
+// ==================== CorelDRAW Mirror / Flip Engine (Horizontal & Vertical) ====================
+function flipSelected(direction) {
+    if (state.selectedElements.length === 0) {
+        toast('Selecione um objeto para espelhar.', 'info');
+        return;
+    }
+
+    const bbox = getCombinedBBox(state.selectedElements);
+    if (!bbox || bbox.width <= 0 || bbox.height <= 0) return;
+
+    const centerX = bbox.x + bbox.width / 2;
+    const centerY = bbox.y + bbox.height / 2;
+
+    state.selectedElements.forEach(el => {
+        const currentTransform = el.getAttribute('transform') || '';
+
+        if (direction === 'horizontal') {
+            const flipTransform = `translate(${centerX.toFixed(2)}, ${centerY.toFixed(2)}) scale(-1, 1) translate(${-centerX.toFixed(2)}, ${-centerY.toFixed(2)})`;
+            el.setAttribute('transform', `${flipTransform} ${currentTransform}`.trim());
+        } else if (direction === 'vertical') {
+            const flipTransform = `translate(${centerX.toFixed(2)}, ${centerY.toFixed(2)}) scale(1, -1) translate(${-centerX.toFixed(2)}, ${-centerY.toFixed(2)})`;
+            el.setAttribute('transform', `${flipTransform} ${currentTransform}`.trim());
+        }
+    });
+
+    renderSelectionOverlay();
+    updatePropertyBar();
+    saveState(`Espelhar ${direction === 'horizontal' ? 'Horizontal' : 'Vertical'}`);
+    toast(`Objeto espelhado ${direction === 'horizontal' ? 'horizontalmente ↔' : 'verticalmente ↕'}`, 'ok');
+}
+
 function convertSelectedToCurves() {
     toast('Objeto convertido em Curvas Bézier (Ctrl+Q)!', 'ok');
     selectTool('node');
