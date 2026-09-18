@@ -126,6 +126,8 @@ $baseDir = './';
                     <button type="button" class="dropdown-item" onclick="booleanOperation('weld')"><i class="fas fa-layer-group"></i> Soldar (Weld)</button>
                     <button type="button" class="dropdown-item" onclick="booleanOperation('trim')"><i class="fas fa-cut"></i> Aparar (Trim)</button>
                     <button type="button" class="dropdown-item" onclick="booleanOperation('intersect')"><i class="fas fa-circle-notch"></i> Interseção (Intersect)</button>
+                    <div class="dropdown-separator"></div>
+                    <button type="button" class="dropdown-item" onclick="openContourDialog()"><i class="fas fa-bullseye text-pink-600"></i> Contorno / Borda de Adesivo...</button>
                 </div>
             </div>
 
@@ -306,6 +308,7 @@ $baseDir = './';
                 <div class="toolbar-group">
                     <button type="button" class="t-btn" onclick="applyPowerClip()" title="PowerClip: Colocar no Recipiente"><i class="fas fa-sign-in-alt text-amber-600"></i></button>
                     <button type="button" class="t-btn" id="btnExtractPowerClip" onclick="extractPowerClip()" style="display:none;" title="PowerClip: Extrair Conteúdo"><i class="fas fa-sign-out-alt text-amber-600"></i></button>
+                    <button type="button" class="t-btn" onclick="openContourDialog()" title="Contorno / Borda de Adesivo e Corte (Contour)"><i class="fas fa-bullseye text-pink-600"></i></button>
                 </div>
                 <div class="tool-sep"></div>
                 <!-- PowerTRACE Action Button for Selected Bitmaps -->
@@ -393,6 +396,10 @@ $baseDir = './';
             <!-- 13. PowerTRACE (Vetorizar Bitmap) -->
             <button type="button" class="tool-btn" id="toolBtn_trace" onclick="openPowerTraceDialog()" title="PowerTRACE™ — Vetorizar Bitmap / Logo (Curvas)">
                 <i class="fas fa-bolt text-amber-500"></i>
+            </button>
+            <!-- 14. Contour Tool (Borda de Adesivo / Corte) -->
+            <button type="button" class="tool-btn" id="toolBtn_contour" onclick="openContourDialog()" title="Contorno / Borda de Adesivo e Corte (Contour)">
+                <i class="fas fa-bullseye text-pink-600"></i>
             </button>
 
             <!-- Toolbox Color Swatches (Base da Barra de Ferramentas Corel) -->
@@ -627,6 +634,71 @@ $baseDir = './';
             <button type="button" class="btn-secondary" onclick="closePowerTraceDialog()">Cancelar</button>
             <button type="button" class="btn-primary" onclick="runPowerTrace()" style="background:#d97706; border-color:#b45309; padding:7px 16px;">
                 <i class="fas fa-magic"></i> Rastrear e Gerar Curvas Vetoriais
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== Contour Tool (Borda / Linha de Corte) Modal ==================== -->
+<div id="contourModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" style="width: 480px; max-width:95vw;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fas fa-bullseye text-pink-600"></i> Ferramenta Contorno / Borda de Corte (Contour)</div>
+            <button type="button" class="btn-win-ctl" onclick="closeContourDialog()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:11.5px; color:#444; margin-bottom:12px;">Crie uma borda de sangria, base para adesivo (*sticker*) ou linha de corte para plotter ao redor dos objetos selecionados.</p>
+            
+            <div style="background:#f9f9f9; border:1px solid #e0e0e0; border-radius:4px; padding:10px; margin-bottom:12px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Estilo da Borda:</label>
+                    <select id="contourStyle" class="corel-select" style="width:200px; font-size:11px;">
+                        <option value="sticker" selected>Borda de Adesivo (Preenchida)</option>
+                        <option value="cutline">Linha de Corte / Plotter (Apenas Contorno)</option>
+                    </select>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Espessura / Offset (mm):</label>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <input type="number" id="contourOffsetMm" class="prop-input" value="3.0" min="0.5" max="50" step="0.5" style="width:70px;">
+                        <span style="font-size:11px; color:#666;">mm</span>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Cor da Borda / Linha:</label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="color" id="contourColorInput" value="#ffffff" style="width:36px; height:24px; border:1px solid #ccc; border-radius:3px; cursor:pointer;">
+                        <select id="contourQuickColors" class="corel-select" style="width:140px; font-size:10.5px;" onchange="document.getElementById('contourColorInput').value = this.value">
+                            <option value="#ffffff" selected>Branco (Adesivo)</option>
+                            <option value="#ff00ff">Magenta (Linha de Corte)</option>
+                            <option value="#000000">Preto</option>
+                            <option value="#ffd600">Amarelo Ouro</option>
+                            <option value="#00e5ff">Ciano</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Cantos:</label>
+                    <select id="contourCorners" class="corel-select" style="width:200px; font-size:11px;">
+                        <option value="round" selected>Arredondados (Para Plotter / Lâmina)</option>
+                        <option value="miter">Cantos Vivos (Retos)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:#222; cursor:pointer;">
+                    <input type="checkbox" id="contourGroupWithOriginal" checked> Agrupar borda gerada com o objeto original (Ctrl+G)
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeContourDialog()">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="applyContourFromModal()" style="background:#db2777; border-color:#be185d; padding:7px 16px;">
+                <i class="fas fa-bullseye"></i> Aplicar Contorno
             </button>
         </div>
     </div>

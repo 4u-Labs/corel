@@ -2740,6 +2740,96 @@ function extractPowerClip() {
     toast('Conteúdo do PowerClip extraído com sucesso!', 'ok');
 }
 
+// ==================== CorelDRAW Contour / Borda de Adesivo Engine ====================
+function openContourDialog() {
+    if (state.selectedElements.length === 0) {
+        toast('Selecione um objeto ou texto para aplicar o contorno.', 'info');
+        return;
+    }
+    const modal = document.getElementById('contourModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeContourDialog() {
+    const modal = document.getElementById('contourModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function applyContourFromModal() {
+    if (state.selectedElements.length === 0) {
+        closeContourDialog();
+        return;
+    }
+
+    const style = document.getElementById('contourStyle')?.value || 'sticker';
+    const offsetMm = parseFloat(document.getElementById('contourOffsetMm')?.value || '3.0') || 3.0;
+    const color = document.getElementById('contourColorInput')?.value || '#ffffff';
+    const corners = document.getElementById('contourCorners')?.value || 'round';
+    const groupWithOrig = document.getElementById('contourGroupWithOriginal')?.checked ?? true;
+
+    // Converte mm em pixels (96 DPI: 1mm = 3.7795px)
+    const offsetPx = offsetMm * 3.7795275591;
+    const strokeWidth = style === 'sticker' ? (offsetPx * 2) : 1.5;
+
+    const layerGroup = document.getElementById('layerGroupMain');
+    const createdContours = [];
+
+    state.selectedElements.forEach(origEl => {
+        const parent = origEl.parentNode || layerGroup;
+
+        // Se for grupo, clona a estrutura inteira
+        const contourEl = origEl.cloneNode(true);
+        contourEl.removeAttribute('id');
+        contourEl.setAttribute('class', 'corel-contour-element');
+
+        const applyStyleToPrimitive = (el) => {
+            if (style === 'sticker') {
+                el.setAttribute('fill', color);
+                el.setAttribute('stroke', color);
+                el.setAttribute('stroke-width', strokeWidth.toFixed(1));
+                el.setAttribute('stroke-linejoin', corners);
+                el.setAttribute('stroke-linecap', corners);
+                el.removeAttribute('clip-path');
+            } else { // cutline para plotter
+                el.setAttribute('fill', 'none');
+                el.setAttribute('stroke', color);
+                el.setAttribute('stroke-width', '1.5');
+                el.setAttribute('stroke-linejoin', corners);
+                el.setAttribute('stroke-linecap', corners);
+                el.removeAttribute('clip-path');
+            }
+        };
+
+        if (contourEl.tagName.toLowerCase() === 'g') {
+            contourEl.querySelectorAll('*').forEach(applyStyleToPrimitive);
+        } else {
+            applyStyleToPrimitive(contourEl);
+        }
+
+        if (groupWithOrig) {
+            const wrapperGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            wrapperGroup.setAttribute('class', 'contour-sticker-group user-group');
+            parent.insertBefore(wrapperGroup, origEl);
+            wrapperGroup.appendChild(contourEl); // Fica atrás
+            wrapperGroup.appendChild(origEl);     // Fica na frente
+            createdContours.push(wrapperGroup);
+        } else {
+            // Insere atrás do objeto original
+            parent.insertBefore(contourEl, origEl);
+            createdContours.push(contourEl);
+        }
+    });
+
+    closeContourDialog();
+    state.selectedElements = createdContours;
+    renderSelectionOverlay();
+    updateLayersTree();
+    updatePropertyBar();
+    saveState(`Criar Contorno (${offsetMm}mm)`);
+    toast(`⚡ Contorno de ${offsetMm}mm aplicado com sucesso!`, 'ok');
+}
+
+
 // ==================== Keyboard Shortcuts ====================
 function initKeyboardShortcuts() {
     // ---- Bloquear zoom nativo do browser em toda a janela ----
