@@ -34,7 +34,9 @@ const state = {
     penPath: null,
     penPoints: [],
     isPowerClipping: false,
-    powerClipTargetContent: null
+    powerClipTargetContent: null,
+    isPickingPathForText: false,
+    targetTextForPath: null
 };
 
 // Standard Corel Color Palette (40+ classic swatches)
@@ -550,6 +552,27 @@ function initCanvasEvents() {
             toast('PowerClip cancelado (clique fora do recipiente).', 'info');
             state.isPowerClipping = false;
             state.powerClipTargetContent = null;
+            document.body.style.cursor = 'default';
+            return;
+        }
+
+        // 0.1 Text to Path Curve Pick Mode
+        if (state.isPickingPathForText) {
+            e.stopPropagation();
+            const target = e.target;
+            if (target && target.closest('#layerGroupMain')) {
+                const curveEl = target.closest('#layerGroupMain > *');
+                if (curveEl && curveEl !== state.targetTextForPath) {
+                    applyFitTextToPath(state.targetTextForPath, curveEl);
+                    state.isPickingPathForText = false;
+                    state.targetTextForPath = null;
+                    document.body.style.cursor = 'default';
+                    return;
+                }
+            }
+            toast('Ajuste de texto cancelado (clique fora da curva).', 'info');
+            state.isPickingPathForText = false;
+            state.targetTextForPath = null;
             document.body.style.cursor = 'default';
             return;
         }
@@ -1305,6 +1328,11 @@ function updatePropertyBar() {
         const isPowerClip = state.selectedElements.some(el => el.classList && el.classList.contains('corel-powerclip-group'));
         const btnExtractPC = document.getElementById('btnExtractPowerClip');
         if (btnExtractPC) btnExtractPC.style.display = isPowerClip ? 'inline-flex' : 'none';
+
+        // Show/hide Separate Text from Path button
+        const isTextOnPath = state.selectedElements.some(el => (el.classList && el.classList.contains('text-on-path-group')) || (el.closest && el.closest('.text-on-path-group')));
+        const btnSepTP = document.getElementById('btnSepTextPath');
+        if (btnSepTP) btnSepTP.style.display = isTextOnPath ? 'inline-flex' : 'none';
 
         // Update blend mode and opacity in right docker
         const first = state.selectedElements[0];
@@ -3159,6 +3187,135 @@ function removeDropShadowFromSelected() {
     saveState('Remover Sombra');
     toast('Sombra removida do(s) objeto(s).', 'ok');
 }
+
+// ==================== CorelDRAW Fit Text to Path Engine (Texto no Caminho) ====================
+function fitTextToPath() {
+    if (state.selectedElements.length === 0) {
+        toast('Selecione primeiro o texto que deseja ajustar à curva.', 'info');
+        return;
+    }
+
+    // Procura texto e curva na seleção
+    const textEl = state.selectedElements.find(el => el.tagName.toLowerCase() === 'text');
+    const curveEl = state.selectedElements.find(el => el.tagName.toLowerCase() !== 'text');
+
+    // Se ambos já estiverem selecionados juntos
+    if (textEl && curveEl) {
+        applyFitTextToPath(textEl, curveEl);
+        return;
+    }
+
+    // Se apenas o texto estiver selecionado, entra em modo interativo de seleção da curva
+    if (textEl) {
+        state.targetTextForPath = textEl;
+        state.isPickingPathForText = true;
+        document.body.style.cursor = 'crosshair';
+        toast('🎯 Clique sobre o círculo ou curva onde deseja ajustar o texto.', 'info');
+        return;
+    }
+
+    toast('Selecione um elemento de texto para curvar.', 'warn');
+}
+
+function applyFitTextToPath(textEl, curveEl) {
+    if (!textEl || !curveEl) return;
+
+    const layerGroup = document.getElementById('layerGroupMain');
+    const parent = curveEl.parentNode || layerGroup;
+
+    // Se a curva for um círculo, elipse, polígono ou retângulo, converte para <path>
+    let pathElement = curveEl;
+    if (curveEl.tagName.toLowerCase() !== 'path') {
+        const converted = convertShapeToPath(curveEl);
+        if (converted) {
+            parent.insertBefore(converted, curveEl);
+            curveEl.remove();
+            pathElement = converted;
+        }
+    }
+
+    // Garante ID na curva
+    const pathId = pathElement.id || `curve_path_${Date.now()}`;
+    pathElement.setAttribute('id', pathId);
+
+    // Lê o conteúdo textual
+    const textContent = textEl.textContent.trim();
+
+    // Cria o elemento <textPath> do SVG W3C
+    textEl.innerHTML = '';
+    textEl.removeAttribute('x');
+    textEl.removeAttribute('y');
+
+    const textPath = document.createElementNS('http://www.w3.org/2000/svg', 'textPath');
+    textPath.setAttribute('href', `#${pathId}`);
+    textPath.setAttribute('startOffset', '50%');
+    textPath.setAttribute('text-anchor', 'middle');
+    textPath.textContent = textContent;
+
+    textEl.appendChild(textPath);
+
+    // Agrupa o texto e a curva para moverem juntos
+    const wrapperGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    wrapperGroup.setAttribute('class', 'text-on-path-group user-group');
+
+    parent.insertBefore(wrapperGroup, pathElement);
+    wrapperGroup.appendChild(pathElement);
+    wrapperGroup.appendChild(textEl);
+
+    selectElement(wrapperGroup, false);
+    saveState('Ajustar Texto ao Caminho');
+    updateLayersTree();
+    updatePropertyBar();
+    toast('⚡ Texto perfeitamente ajustado à curva (Text on Path)!', 'ok');
+}
+
+function separateTextFromPath() {
+    if (state.selectedElements.length === 0) {
+        toast('Selecione um texto curvado para separar do caminho.', 'info');
+        return;
+    }
+
+    const group = state.selectedElements.find(el => el.classList && el.classList.contains('text-on-path-group')) ||
+                  (state.selectedElements[0].closest && state.selectedElements[0].closest('.text-on-path-group'));
+
+    if (!group) {
+        toast('O objeto selecionado não é um texto ajustado a caminho.', 'warn');
+        return;
+    }
+
+    const textEl = group.querySelector('text');
+    const textPath = textEl ? textEl.querySelector('textPath') : null;
+    const pathEl = group.querySelector('path');
+    const parent = group.parentNode || document.getElementById('layerGroupMain');
+
+    const newSelected = [];
+
+    if (textEl && textPath) {
+        const textContent = textPath.textContent;
+        const bbox = group.getBBox();
+        textEl.innerHTML = '';
+        textEl.textContent = textContent;
+        textEl.setAttribute('x', Math.round(bbox.x).toString());
+        textEl.setAttribute('y', Math.round(bbox.y + 20).toString());
+        parent.insertBefore(textEl, group);
+        newSelected.push(textEl);
+    }
+
+    if (pathEl) {
+        parent.insertBefore(pathEl, group);
+        newSelected.push(pathEl);
+    }
+
+    group.remove();
+
+    state.selectedElements = newSelected;
+    renderSelectionOverlay();
+    updateLayersTree();
+    updatePropertyBar();
+    saveState('Separar Texto do Caminho');
+    toast('Texto separado da curva com sucesso!', 'ok');
+}
+
 
 function initKeyboardShortcuts() {
     // ---- Bloquear zoom nativo do browser em toda a janela ----

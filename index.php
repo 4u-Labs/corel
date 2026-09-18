@@ -120,6 +120,10 @@ $baseDir = './';
                     <!-- CorelDRAW QR Code -->
                     <button type="button" class="dropdown-item" onclick="openQrCodeDialog()"><i class="fas fa-qrcode text-emerald-600"></i> Inserir Código QR Code...</button>
                     <div class="dropdown-separator"></div>
+                    <!-- CorelDRAW Text on Path -->
+                    <button type="button" class="dropdown-item" onclick="fitTextToPath()"><i class="fas fa-italic text-sky-600"></i> Ajustar Texto ao Caminho...</button>
+                    <button type="button" class="dropdown-item" onclick="separateTextFromPath()"><i class="fas fa-unlink text-sky-600"></i> Separar Texto do Caminho</button>
+                    <div class="dropdown-separator"></div>
                     <button type="button" class="dropdown-item" onclick="orderSelected('front')"><i class="fas fa-angle-double-up"></i> Trazer para Frente <span class="shortcut">Shift+PgUp</span></button>
                     <button type="button" class="dropdown-item" onclick="orderSelected('back')"><i class="fas fa-angle-double-down"></i> Enviar para Trás <span class="shortcut">Shift+PgDn</span></button>
                 </div>
@@ -318,6 +322,8 @@ $baseDir = './';
                     <button type="button" class="t-btn" onclick="openContourDialog()" title="Contorno / Borda de Adesivo e Corte (Contour)"><i class="fas fa-bullseye text-pink-600"></i></button>
                     <button type="button" class="t-btn" onclick="openFountainFillDialog()" title="Preenchimento Gradiente / Degradê (F11)"><i class="fas fa-fill text-purple-600"></i></button>
                     <button type="button" class="t-btn" onclick="openDropShadowDialog()" title="Sombra Projetada (Drop Shadow)"><i class="fas fa-cloud-moon text-indigo-600"></i></button>
+                    <button type="button" class="t-btn" onclick="fitTextToPath()" title="Ajustar Texto ao Caminho (Curvar Texto)"><i class="fas fa-italic text-sky-600"></i></button>
+                    <button type="button" class="t-btn" id="btnSepTextPath" onclick="separateTextFromPath()" style="display:none;" title="Separar Texto do Caminho"><i class="fas fa-unlink text-sky-600"></i></button>
                 </div>
                 <div class="tool-sep"></div>
                 <!-- PowerTRACE Action Button for Selected Bitmaps -->
