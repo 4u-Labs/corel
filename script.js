@@ -4488,6 +4488,10 @@ function openDownloadDesktopModal() {
             : '<i class="fas fa-laptop"></i> Choose your system below';
     }
 
+    if (window.corelI18n && typeof window.corelI18n.applyToDOM === 'function') {
+        window.corelI18n.applyToDOM();
+    }
+
     modal.style.display = 'flex';
 }
 
