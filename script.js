@@ -1100,76 +1100,164 @@ function changeSelectedBlendMode(mode) {
 }
 
 // ==================== Right Docker (Objects / Layers) ====================
+// IDs de elementos SVG internos que nunca devem aparecer no painel de camadas
+const INTERNAL_LAYER_IDS = new Set([
+    'nodeEditOverlay', 'selectionOverlay', 'selectionGroup',
+    'layerGroupMain', 'guidelinesGroup', 'guidlinesGroup',
+    'bgSheet', 'bgImageLayer', 'rulerCorner', 'gridOverlay'
+]);
+
 function updateLayersTree() {
     const container = document.getElementById('objectsTreeList');
     if (!container) return;
     container.innerHTML = '';
 
-    const items = Array.from(document.querySelectorAll('#layerGroupMain > *')).reverse();
+    // Pega somente os objetos reais dentro de layerGroupMain (não o grupo em si)
+    const layerGroup = document.getElementById('layerGroupMain');
+    if (!layerGroup) return;
+
+    // Filtra fora os elementos internos do sistema
+    const allItems = Array.from(layerGroup.children).filter(el => {
+        const id = el.getAttribute('id') || '';
+        return !INTERNAL_LAYER_IDS.has(id) && !el.classList.contains('selection-handle') && !el.classList.contains('node-anchor');
+    });
+
+    // Inverte para mostrar o topo da pilha primeiro (ordem visual do CorelDRAW)
+    const items = [...allItems].reverse();
 
     if (items.length === 0) {
         container.innerHTML = '<div style="padding:16px; color:#888; text-align:center; font-size:11px;">Nenhum objeto na prancheta.<br>Desenhe ou abra um arquivo .CDR / .PDF.</div>';
         return;
     }
 
+    let dragSrcIndex = null; // índice no array "items" do item arrastado
+
     items.forEach((el, index) => {
         const isSelected = state.selectedElements.includes(el);
         const tag = el.tagName.toLowerCase();
-        let name = el.getAttribute('id') || `${capitalize(tag)} ${items.length - index}`;
-        if (tag === 'image') name = 'Imagem Bitmap';
-        if (tag === 'text') name = `Texto: "${el.textContent.slice(0, 12)}..."`;
-        if (tag === 'path') name = `Curva Bézier (${items.length - index})`;
+        const elId = el.getAttribute('id') || '';
+        // Nome amigável
+        let name;
+        if (elId && !elId.match(/^(rect|ellipse|path|polygon|text|image|circle|line|polyline|group|g)\d*$/i)) {
+            name = elId; // ID customizado pelo usuário
+        } else if (tag === 'image') {
+            name = `Imagem Bitmap ${items.length - index}`;
+        } else if (tag === 'text') {
+            name = `Texto: "${el.textContent.slice(0, 15)}"`;
+        } else if (tag === 'path') {
+            name = `Curva Bézier ${items.length - index}`;
+        } else if (tag === 'g') {
+            name = `Grupo ${items.length - index}`;
+        } else {
+            name = `${capitalize(tag)} ${items.length - index}`;
+        }
 
         const row = document.createElement('div');
-        row.className = `layer-tree-item ${isSelected ? 'selected' : ''}`;
+        row.className = `layer-tree-item${isSelected ? ' selected' : ''}`;
+        row.setAttribute('draggable', 'true');
+        row.dataset.layerIndex = index.toString();
+        row.title = 'Arraste para reordenar';
 
-        // Mini thumbnail
+        // ---- Ícone de drag handle ----
+        const drag = document.createElement('span');
+        drag.innerHTML = '<i class="fas fa-grip-vertical" style="color:#bbb;margin-right:4px;cursor:grab;font-size:10px;"></i>';
+
+        // ---- Mini ícone / thumbnail ----
         const thumb = document.createElement('div');
         thumb.className = 'layer-item-thumb';
         thumb.innerHTML = getElementThumbnailSVG(el);
 
-        // Name
+        // ---- Nome (dbl-click para renomear) ----
         const nameSpan = document.createElement('span');
         nameSpan.className = 'layer-item-name';
         nameSpan.textContent = name;
         nameSpan.title = 'Duplo clique para renomear';
-        nameSpan.ondblclick = () => {
+        nameSpan.ondblclick = (ev) => {
+            ev.stopPropagation();
             const newName = prompt('Renomear objeto:', name);
-            if (newName) {
-                el.setAttribute('id', newName);
+            if (newName && newName.trim()) {
+                el.setAttribute('id', newName.trim());
                 updateLayersTree();
             }
         };
 
-        // Actions (Eye visibility and Lock)
+        // ---- Botão olho (visibilidade) ----
         const actions = document.createElement('div');
         actions.className = 'layer-item-actions';
-
-        const isHidden = el.style.display === 'none';
+        const isHidden = el.style.display === 'none' || el.style.visibility === 'hidden';
         const eyeBtn = document.createElement('button');
         eyeBtn.className = 'btn-layer-eye';
-        eyeBtn.innerHTML = isHidden ? '<i class="fas fa-eye-slash" style="color:#aaa;"></i>' : '<i class="fas fa-eye"></i>';
-        eyeBtn.title = isHidden ? 'Exibir' : 'Ocultar';
-        eyeBtn.onclick = (e) => {
-            e.stopPropagation();
+        eyeBtn.innerHTML = isHidden
+            ? '<i class="fas fa-eye-slash" style="color:#aaa;"></i>'
+            : '<i class="fas fa-eye"></i>';
+        eyeBtn.title = isHidden ? 'Exibir objeto' : 'Ocultar objeto';
+        eyeBtn.onclick = (ev) => {
+            ev.stopPropagation();
             el.style.display = isHidden ? '' : 'none';
             renderSelectionOverlay();
             updateLayersTree();
         };
-
         actions.appendChild(eyeBtn);
 
+        row.appendChild(drag);
         row.appendChild(thumb);
         row.appendChild(nameSpan);
         row.appendChild(actions);
 
-        row.onclick = (e) => {
-            selectElement(el, e.shiftKey);
+        // ---- Clique para selecionar na prancheta ----
+        row.onclick = (ev) => {
+            if (ev.target.closest('.btn-layer-eye')) return;
+            selectElement(el, ev.shiftKey);
         };
+
+        // ---- Drag & Drop para reordenar ----
+        row.addEventListener('dragstart', (ev) => {
+            dragSrcIndex = index;
+            ev.dataTransfer.effectAllowed = 'move';
+            row.style.opacity = '0.5';
+        });
+        row.addEventListener('dragend', () => {
+            row.style.opacity = '';
+            container.querySelectorAll('.layer-tree-item').forEach(r => r.classList.remove('drag-over'));
+        });
+        row.addEventListener('dragover', (ev) => {
+            ev.preventDefault();
+            ev.dataTransfer.dropEffect = 'move';
+            container.querySelectorAll('.layer-tree-item').forEach(r => r.classList.remove('drag-over'));
+            row.classList.add('drag-over');
+        });
+        row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+        row.addEventListener('drop', (ev) => {
+            ev.preventDefault();
+            row.classList.remove('drag-over');
+            if (dragSrcIndex === null || dragSrcIndex === index) return;
+
+            // items[] está invertido (topo=0). O SVG stack é allItems[] (fundo=0).
+            // Precisamos mapear de volta para indices reais no layerGroup
+            const srcEl = items[dragSrcIndex];
+            const dstEl = items[index];
+
+            // No SVG, "mais acima visualmente" = mais próximo do fim de layerGroup
+            // Items[0] = topo visual = último filho do layerGroup
+            // Mover srcEl para antes ou depois de dstEl no layerGroup
+            if (dragSrcIndex > index) {
+                // src estava mais abaixo, sobe: insert dstEl.nextSibling
+                layerGroup.insertBefore(srcEl, dstEl.nextSibling);
+            } else {
+                // src estava mais acima, desce: insert antes de dstEl
+                layerGroup.insertBefore(srcEl, dstEl);
+            }
+
+            dragSrcIndex = null;
+            renderSelectionOverlay();
+            updateLayersTree();
+            saveState('Reordenar camada');
+        });
 
         container.appendChild(row);
     });
 }
+
 
 function getElementThumbnailSVG(el) {
     const tag = el.tagName.toLowerCase();

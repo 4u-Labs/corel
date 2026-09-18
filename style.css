@@ -721,6 +721,19 @@ body, html {
     border-left: 3px solid #0066cc;
 }
 
+.layer-tree-item.drag-over {
+    background: #fff3cd;
+    border-top: 2px solid #e6a800;
+}
+
+.layer-tree-item[draggable="true"] {
+    cursor: grab;
+}
+.layer-tree-item[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+
 .layer-item-thumb {
     width: 24px;
     height: 24px;
