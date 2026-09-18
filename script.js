@@ -791,7 +791,7 @@ function initCanvasEvents() {
     });
 
     // Mouse Up
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('mouseup', (e) => {
         if (state.isPanning) {
             state.isPanning = false;
             scroller.style.cursor = 'default';
@@ -805,7 +805,56 @@ function initCanvasEvents() {
         }
 
         if (state.isDrawing && state.currentElement) {
-            selectElement(state.currentElement, false);
+            // ---- Ferramenta Crop: aplica clipping aos objetos selecionados ----
+            if (state.activeTool === 'crop') {
+                const cropEl = state.currentElement; // o _cropPreview rect
+                const cx = parseFloat(cropEl.getAttribute('x'));
+                const cy = parseFloat(cropEl.getAttribute('y'));
+                const cw = parseFloat(cropEl.getAttribute('width'));
+                const ch = parseFloat(cropEl.getAttribute('height'));
+                cropEl.remove(); // remove o preview visual
+
+                // Define um clipPath SVG e aplica a cada objeto selecionado
+                if (state.selectedElements.length > 0 && cw > 5 && ch > 5) {
+                    const mainSvg = document.getElementById('mainSvgCanvas');
+                    const defs = mainSvg.querySelector('defs') || (() => {
+                        const d = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                        mainSvg.prepend(d);
+                        return d;
+                    })();
+
+                    const clipId = `clip_${Date.now()}`;
+                    const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+                    clipPath.setAttribute('id', clipId);
+                    const clipRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    clipRect.setAttribute('x', cx.toString());
+                    clipRect.setAttribute('y', cy.toString());
+                    clipRect.setAttribute('width', cw.toString());
+                    clipRect.setAttribute('height', ch.toString());
+                    clipPath.appendChild(clipRect);
+                    defs.appendChild(clipPath);
+
+                    state.selectedElements.forEach(el => {
+                        el.setAttribute('clip-path', `url(#${clipId})`);
+                    });
+                    saveState('Cortar Região');
+                    toast('Recorte aplicado aos objetos selecionados!', 'ok');
+                } else if (cw <= 5 || ch <= 5) {
+                    toast('Arraste para definir a área de recorte.', 'err');
+                }
+
+                state.isDrawing = false;
+                state.currentElement = null;
+                selectTool('select');
+                return;
+            }
+
+            // ---- Outras ferramentas de desenho ----
+            const el = state.currentElement;
+            // Só tenta selecionar se for um elemento válido em layerGroupMain
+            if (el.parentElement && el.parentElement.id === 'layerGroupMain') {
+                selectElement(el, false);
+            }
             saveState(`Criar ${state.activeTool}`);
             state.isDrawing = false;
             state.currentElement = null;
@@ -813,6 +862,7 @@ function initCanvasEvents() {
         }
     });
 }
+
 
 function generateStarPoints(cx, cy, spikes, outerRadius, innerRadius) {
     let rot = Math.PI / 2 * 3;
@@ -2489,17 +2539,78 @@ function rebuildSvgPathFromNodes(nodes) {
 }
 
 function enterNodeEditingForSelected() {
-    if (state.selectedElements.length === 0) return;
-    const el = state.selectedElements[0];
-    const tag = el.tagName.toLowerCase();
-    if (tag !== 'path') {
-        toast('Use Ctrl+Q para converter o objeto em Curvas Bézier antes de editar nós.', 'err');
+    if (state.selectedElements.length === 0) {
+        toast('Selecione um objeto antes de usar a Ferramenta Forma.', 'err');
         return;
     }
+    let el = state.selectedElements[0];
+    const tag = el.tagName.toLowerCase();
+
+    // Auto-converter formas primitivas em path para permitir edição de nós
+    if (tag !== 'path') {
+        const converted = convertShapeToPath(el);
+        if (!converted) {
+            toast('Não foi possível converter esta forma em caminho.', 'err');
+            return;
+        }
+        el = converted;
+        state.selectedElements = [el];
+        renderSelectionOverlay();
+        toast('Forma convertida em Curva Bézier automaticamente!', 'ok');
+    }
+
     state.nodeEdit.activePath = el;
     state.nodeEdit.nodes = parseSvgPathToNodes(el.getAttribute('d') || '');
-    state.nodeEdit.activeNodeIndex = 0;
+    state.nodeEdit.activeNodeIndex = (state.nodeEdit.nodes.length > 0) ? 0 : -1;
     renderNodeEditOverlay();
+    toast(`${state.nodeEdit.nodes.filter(n=>n.cmd!=='Z').length} nós disponíveis. Clique num nó para selecioná-lo.`, 'ok');
+}
+
+// Converte rect / ellipse / polygon em SVG <path>
+function convertShapeToPath(el) {
+    const tag = el.tagName.toLowerCase();
+    let d = '';
+
+    if (tag === 'rect') {
+        const x = parseFloat(el.getAttribute('x') || 0);
+        const y = parseFloat(el.getAttribute('y') || 0);
+        const w = parseFloat(el.getAttribute('width') || 0);
+        const h = parseFloat(el.getAttribute('height') || 0);
+        const rx = parseFloat(el.getAttribute('rx') || 0);
+        if (w < 1 || h < 1) return null;
+        if (rx > 0) {
+            const r = Math.min(rx, w/2, h/2);
+            d = `M ${x+r} ${y} L ${x+w-r} ${y} Q ${x+w} ${y} ${x+w} ${y+r} L ${x+w} ${y+h-r} Q ${x+w} ${y+h} ${x+w-r} ${y+h} L ${x+r} ${y+h} Q ${x} ${y+h} ${x} ${y+h-r} L ${x} ${y+r} Q ${x} ${y} ${x+r} ${y} Z`;
+        } else {
+            d = `M ${x} ${y} L ${x+w} ${y} L ${x+w} ${y+h} L ${x} ${y+h} Z`;
+        }
+    } else if (tag === 'ellipse' || tag === 'circle') {
+        const cx = parseFloat(el.getAttribute('cx') || 0);
+        const cy = parseFloat(el.getAttribute('cy') || 0);
+        const rx = parseFloat(el.getAttribute('rx') || el.getAttribute('r') || 0);
+        const ry = parseFloat(el.getAttribute('ry') || el.getAttribute('r') || 0);
+        const k = 0.5522848; // cubic bezier approx constant for circle
+        d = `M ${cx} ${cy-ry} C ${cx+rx*k} ${cy-ry} ${cx+rx} ${cy-ry*k} ${cx+rx} ${cy} C ${cx+rx} ${cy+ry*k} ${cx+rx*k} ${cy+ry} ${cx} ${cy+ry} C ${cx-rx*k} ${cy+ry} ${cx-rx} ${cy+ry*k} ${cx-rx} ${cy} C ${cx-rx} ${cy-ry*k} ${cx-rx*k} ${cy-ry} ${cx} ${cy-ry} Z`;
+    } else if (tag === 'polygon') {
+        const pts = (el.getAttribute('points') || '').trim().split(/[\s,]+/);
+        if (pts.length < 4) return null;
+        const pairs = [];
+        for (let i = 0; i < pts.length - 1; i += 2) pairs.push(`${pts[i]},${pts[i+1]}`);
+        d = `M ${pairs.join(' L ')} Z`;
+    } else {
+        return null;
+    }
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    // Copia atributos visuais
+    ['fill','stroke','stroke-width','opacity','transform','id'].forEach(attr => {
+        const v = el.getAttribute(attr);
+        if (v) path.setAttribute(attr, v);
+    });
+    el.parentElement.replaceChild(path, el);
+    updateLayersTree();
+    return path;
 }
 
 function renderNodeEditOverlay() {
@@ -2509,14 +2620,21 @@ function renderNodeEditOverlay() {
     const nodes = state.nodeEdit.nodes;
     if (!nodes || nodes.length === 0) return;
 
+    // Escala inversa para compensar o zoom (os nós ficam na coordenada SVG, mas o overlay é SVG também)
+    // O overlay está no mesmo sistema de coordenadas que o path — não precisa de compensação
     nodes.forEach((n, idx) => {
         if (n.cmd === 'Z') return;
+
+        // Handle quadrado do nó
         const sq = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        sq.setAttribute('class', `node-anchor${idx === state.nodeEdit.activeNodeIndex ? ' active' : ''}`);
-        sq.setAttribute('x', (n.x - 4).toString());
-        sq.setAttribute('y', (n.y - 4).toString());
-        sq.setAttribute('width', '8');
-        sq.setAttribute('height', '8');
+        const isActive = (idx === state.nodeEdit.activeNodeIndex);
+        sq.setAttribute('x', (n.x - 5).toString());
+        sq.setAttribute('y', (n.y - 5).toString());
+        sq.setAttribute('width', '10');
+        sq.setAttribute('height', '10');
+        sq.setAttribute('fill', isActive ? '#0066cc' : '#ffffff');
+        sq.setAttribute('stroke', '#0044aa');
+        sq.setAttribute('stroke-width', '1.5');
         sq.style.cursor = 'move';
         sq.addEventListener('mousedown', (e) => {
             e.stopPropagation();
@@ -2524,8 +2642,31 @@ function renderNodeEditOverlay() {
             renderNodeEditOverlay();
         });
         overlay.appendChild(sq);
+
+        // Linhas de controle para nós Bézier (tipo C)
+        if (n.cmd === 'C' && n.cp2) {
+            const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line2.setAttribute('x1', n.x.toString());
+            line2.setAttribute('y1', n.y.toString());
+            line2.setAttribute('x2', n.cp2.x.toString());
+            line2.setAttribute('y2', n.cp2.y.toString());
+            line2.setAttribute('stroke', '#0088ff');
+            line2.setAttribute('stroke-width', '1');
+            line2.setAttribute('stroke-dasharray', '3,2');
+            overlay.appendChild(line2);
+
+            const cp2dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            cp2dot.setAttribute('cx', n.cp2.x.toString());
+            cp2dot.setAttribute('cy', n.cp2.y.toString());
+            cp2dot.setAttribute('r', '4');
+            cp2dot.setAttribute('fill', '#88ccff');
+            cp2dot.setAttribute('stroke', '#0044aa');
+            cp2dot.setAttribute('stroke-width', '1');
+            overlay.appendChild(cp2dot);
+        }
     });
 }
+
 
 function addNodeToSelectedPath() {
     const nodes = state.nodeEdit.nodes;
