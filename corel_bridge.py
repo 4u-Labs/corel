@@ -8,7 +8,7 @@ Also serves CorelClone Pro directly on http://127.0.0.1:54321 for 100% offline u
 """
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import tempfile, subprocess, os, sys, shutil, re
+import tempfile, subprocess, os, sys, shutil, re, json
 import xml.etree.ElementTree as ET
 
 PORT = 54321
@@ -274,67 +274,104 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
             is_pdf = file_bytes.startswith(b'%PDF') or orig_filename.lower().endswith('.pdf')
 
             with tempfile.TemporaryDirectory() as tmpdir:
+                pdf_path = None
                 if is_pdf:
-                    # Conversion for PDF using pdftocairo (or libreoffice fallback)
-                    input_file = os.path.join(tmpdir, "input.pdf")
-                    output_svg = os.path.join(tmpdir, "output.svg")
-                    with open(input_file, 'wb') as f:
+                    pdf_path = os.path.join(tmpdir, "input.pdf")
+                    with open(pdf_path, 'wb') as f:
                         f.write(file_bytes)
-
-                    # Try pdftocairo first (fastest and cleanest vector SVG)
-                    proc = subprocess.run(['pdftocairo', '-svg', input_file, output_svg], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=20)
-                    
-                    if not os.path.isfile(output_svg) or os.path.getsize(output_svg) == 0:
-                        # Fallback to libreoffice
-                        cmd = ['libreoffice', '--headless', '--convert-to', 'svg', input_file, '--outdir', tmpdir]
-                        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
-                        svg_candidates = [f for f in os.listdir(tmpdir) if f.endswith('.svg')]
-                        if svg_candidates:
-                            output_svg = os.path.join(tmpdir, svg_candidates[0])
-
-                    if not os.path.isfile(output_svg) or os.path.getsize(output_svg) == 0:
-                        self.send_response(500)
-                        self.send_cors_headers()
-                        self.send_header('Content-Type', 'application/json')
-                        self.end_headers()
-                        self.wfile.write(b'{"error": "Falha na conversao do PDF para SVG"}')
-                        return
-
-                    with open(output_svg, 'rb') as f:
-                        svg_content = f.read()
-
                 else:
-                    # Conversion for CDR using LibreOffice (libcdr backend)
+                    # Conversion for CDR using LibreOffice (libcdr backend -> PDF for maximum speed and multi-page fidelity)
                     input_cdr = os.path.join(tmpdir, "input.cdr")
                     with open(input_cdr, 'wb') as f:
                         f.write(file_bytes)
 
-                    cmd = ['libreoffice', '--headless', '--convert-to', 'svg', input_cdr, '--outdir', tmpdir]
-                    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=40)
+                    cmd = ['libreoffice', '--headless', '--convert-to', 'pdf', input_cdr, '--outdir', tmpdir]
+                    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
 
-                    svg_files = [f for f in os.listdir(tmpdir) if f.endswith('.svg')]
-                    if not svg_files:
-                        err_msg = proc.stderr.decode(errors='ignore') or proc.stdout.decode(errors='ignore') or "Falha na conversao vetorial"
-                        self.send_response(500)
-                        self.send_cors_headers()
-                        self.send_header('Content-Type', 'application/json')
-                        self.end_headers()
-                        self.wfile.write(f'{{"error": "{err_msg}"}}'.encode())
-                        return
+                    pdf_candidates = [f for f in os.listdir(tmpdir) if f.endswith('.pdf')]
+                    if pdf_candidates:
+                        pdf_path = os.path.join(tmpdir, pdf_candidates[0])
+                    else:
+                        # Fallback to direct SVG conversion if PDF conversion produced no file
+                        cmd_svg = ['libreoffice', '--headless', '--convert-to', 'svg', input_cdr, '--outdir', tmpdir]
+                        subprocess.run(cmd_svg, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=40)
+                        svg_files = [f for f in os.listdir(tmpdir) if f.endswith('.svg')]
+                        if svg_files:
+                            svg_path = os.path.join(tmpdir, svg_files[0])
+                            with open(svg_path, 'rb') as f:
+                                raw_svg = f.read()
+                            svg_content = clean_libreoffice_svg(raw_svg).decode('utf-8', errors='ignore')
+                            resp_json = {
+                                "success": True,
+                                "format": "cdr",
+                                "multiPage": False,
+                                "pageCount": 1,
+                                "pages": [{"id": 0, "name": "Página 1", "svg": svg_content}]
+                            }
+                            resp_bytes = json.dumps(resp_json).encode('utf-8')
+                            self.send_response(200)
+                            self.send_cors_headers()
+                            self.send_header('Content-Type', 'application/json; charset=utf-8')
+                            self.send_header('Content-Length', str(len(resp_bytes)))
+                            self.end_headers()
+                            self.wfile.write(resp_bytes)
+                            return
+                        else:
+                            err_msg = proc.stderr.decode(errors='ignore') or proc.stdout.decode(errors='ignore') or "Falha na conversao do arquivo CorelDRAW (.CDR)"
+                            self.send_response(500)
+                            self.send_cors_headers()
+                            self.send_header('Content-Type', 'application/json')
+                            self.end_headers()
+                            self.wfile.write(f'{{"error": "{err_msg}"}}'.encode())
+                            return
 
-                    svg_path = os.path.join(tmpdir, svg_files[0])
-                    with open(svg_path, 'rb') as f:
-                        raw_svg = f.read()
+                # Multi-page vector extraction via pdftocairo
+                pages_count = 1
+                try:
+                    info_res = subprocess.run(['pdfinfo', pdf_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
+                    for line in info_res.stdout.splitlines():
+                        if line.startswith('Pages:'):
+                            pages_count = int(line.split(':')[1].strip())
+                            break
+                except Exception as pe:
+                    print(f"[CorelBridge] Aviso pdfinfo: {pe}")
 
-                    # Clean LibreOffice SVG: prune rogue pasteboard objects and dummy rects
-                    svg_content = clean_libreoffice_svg(raw_svg)
+                pages_list = []
+                for i in range(1, pages_count + 1):
+                    page_svg_path = os.path.join(tmpdir, f"page_{i}.svg")
+                    subprocess.run(['pdftocairo', '-svg', '-f', str(i), '-l', str(i), pdf_path, page_svg_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+                    if os.path.isfile(page_svg_path) and os.path.getsize(page_svg_path) > 0:
+                        with open(page_svg_path, 'r', encoding='utf-8', errors='ignore') as sf:
+                            svg_text = sf.read()
+                        pages_list.append({
+                            "id": i - 1,
+                            "name": f"Página {i}",
+                            "svg": svg_text
+                        })
+
+                if not pages_list:
+                    self.send_response(500)
+                    self.send_cors_headers()
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(b'{"error": "Nao foi possivel extrair as paginas vetoriais do arquivo"}')
+                    return
+
+                resp_data = {
+                    "success": True,
+                    "format": "pdf" if is_pdf else "cdr",
+                    "multiPage": len(pages_list) > 1,
+                    "pageCount": len(pages_list),
+                    "pages": pages_list
+                }
+                resp_bytes = json.dumps(resp_data).encode('utf-8')
 
                 self.send_response(200)
                 self.send_cors_headers()
-                self.send_header('Content-Type', 'image/svg+xml; charset=utf-8')
-                self.send_header('Content-Length', str(len(svg_content)))
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Content-Length', str(len(resp_bytes)))
                 self.end_headers()
-                self.wfile.write(svg_content)
+                self.wfile.write(resp_bytes)
 
         except Exception as e:
             self.send_response(500)

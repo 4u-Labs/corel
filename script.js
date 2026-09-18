@@ -1591,14 +1591,18 @@ async function handleImportFile(file) {
     if (ext === 'cdr' || ext === 'pdf') {
         // 1. Tentar conversão direta de Alta Fidelidade com o Bridge Vetorial
         let convertedSvg = null;
+        let convertedPages = null;
+        const isLocalHost = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+
         try {
-            toast(`Conectando ao conversor vetorial para .${ext.toUpperCase()}...`, 'ok');
+            toast(`⚡ Processando .${ext.toUpperCase()} com Precisão Vetorial Nativa (Camadas & Nós)...`, 'ok');
             const formData = new FormData();
             formData.append('file', file);
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 20000);
+            // Timeout proporcional ao tamanho do arquivo (mínimo 60s, até 180s)
+            const timeoutMs = Math.max(60000, Math.min(180000, Math.round(file.size / 1024) + 60000));
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-            const isLocalHost = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
             const bridgeUrl = isLocalHost ? '/convert' : 'http://127.0.0.1:54321/convert';
 
             const bridgeRes = await fetch(bridgeUrl, {
@@ -1609,13 +1613,42 @@ async function handleImportFile(file) {
             clearTimeout(timeoutId);
 
             if (bridgeRes.ok) {
-                const svgText = await bridgeRes.text();
-                if (svgText && svgText.includes('<svg')) {
-                    convertedSvg = svgText;
+                const respText = await bridgeRes.text();
+                if (respText.trim().startsWith('{')) {
+                    try {
+                        const data = JSON.parse(respText);
+                        if (data.pages && data.pages.length > 0) {
+                            convertedPages = data.pages;
+                        }
+                    } catch (e) {
+                        console.error('Erro ao processar JSON do bridge:', e);
+                    }
+                } else if (respText.includes('<svg')) {
+                    convertedSvg = respText;
                 }
+            } else {
+                console.warn('Bridge retornou status HTTP:', bridgeRes.status);
             }
         } catch (bridgeErr) {
-            console.log('CorelClone Bridge local não conectado:', bridgeErr);
+            console.log('CorelClone Bridge local indisponível ou Mixed-Content bloqueado:', bridgeErr);
+        }
+
+        // Se recebemos páginas vetoriais do bridge (multi-página ou página única)
+        if (convertedPages && convertedPages.length > 0) {
+            if (convertedPages.length > 1) {
+                state.cdrPages = convertedPages.map((p, idx) => ({
+                    id: idx,
+                    name: p.name || `Página ${idx + 1}`,
+                    svgText: p.svg,
+                    svgContent: null
+                }));
+                renderPageTabBar();
+                switchCDRPage(0);
+                toast(`⚡ Arquivo .${ext.toUpperCase()} com ${convertedPages.length} abas aberto com 100% de PRECISÃO VETORIAL e CAMADAS NATIVAS!`, 'ok');
+                return;
+            } else {
+                convertedSvg = convertedPages[0].svg;
+            }
         }
 
         if (convertedSvg) {
@@ -1623,11 +1656,25 @@ async function handleImportFile(file) {
             state.activePageIndex = -1;
             renderPageTabBar();
             importSVGContent(convertedSvg);
-            toast(`⚡ Arquivo .${ext.toUpperCase()} aberto com 100% de PRECISÃO VETORIAL NATIVA!`, 'ok');
+            toast(`⚡ Arquivo .${ext.toUpperCase()} aberto com 100% de PRECISÃO VETORIAL NATIVA e CAMADAS!`, 'ok');
             return;
         }
 
-        // 2. Fallback quando o Bridge local não responder
+        // 2. Fallback quando o Bridge local não responder (ex: na Web 4u.ia.br)
+        if (!isLocalHost && ext === 'cdr') {
+            const openLocal = confirm(
+                "⚠️ Conversão de Alta Precisão CorelDRAW (.CDR)\n\n" +
+                "Você está acessando a versão Web (4u.ia.br). O navegador bloqueia o conversor nativo por segurança (HTTPS Mixed Content).\n\n" +
+                "• Para abrir com TODAS AS CURVAS, NÓS BÉZIER E CAMADAS EDITÁVEIS:\n" +
+                "  Clique em [OK] para abrir no CorelClone App Local (http://127.0.0.1:54321).\n\n" +
+                "• Ou clique em [Cancelar] para abrir apenas a pré-visualização de imagem nesta aba e usar o PowerTRACE."
+            );
+            if (openLocal) {
+                window.open('http://127.0.0.1:54321/', '_blank');
+                return;
+            }
+        }
+
         if (ext === 'pdf') {
             await parsePDFFile(file);
         } else {
@@ -1904,7 +1951,7 @@ function importImageURL(url) {
     tempImg.src = url;
 }
 
-function importSVGContent(svgText) {
+function importSVGContent(svgText, isTabPage = false) {
     try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(svgText, 'image/svg+xml');
@@ -1980,26 +2027,43 @@ function importSVGContent(svgText) {
         let targetH = parseDim(svgEl.getAttribute('height'), vbH || 600);
 
         let scaleFactor = 1;
-        if (vbW > 0 && vbH > 0) {
-            scaleFactor = targetW / vbW;
-        }
+        let posX = 0;
+        let posY = 0;
 
-        // Se o tamanho for desproporcional à prancheta, ajustar proporcionalmente
-        if (targetW > state.docWidth * 0.95 || targetH > state.docHeight * 0.95) {
-            const fitScale = Math.min((state.docWidth * 0.85) / targetW, (state.docHeight * 0.85) / targetH);
-            scaleFactor *= fitScale;
-            targetW *= fitScale;
-            targetH *= fitScale;
+        if (isTabPage && targetW > 50 && targetH > 50) {
+            state.docWidth = Math.round(targetW);
+            state.docHeight = Math.round(targetH);
+            applyDocDimensions();
+            posX = 0;
+            posY = 0;
+            if (vbW > 0 && vbH > 0) {
+                scaleFactor = targetW / vbW;
+            }
+        } else {
+            if (vbW > 0 && vbH > 0) {
+                scaleFactor = targetW / vbW;
+            }
+
+            // Se o tamanho for desproporcional à prancheta, ajustar proporcionalmente
+            if (targetW > state.docWidth * 0.95 || targetH > state.docHeight * 0.95) {
+                const fitScale = Math.min((state.docWidth * 0.85) / targetW, (state.docHeight * 0.85) / targetH);
+                scaleFactor *= fitScale;
+                targetW *= fitScale;
+                targetH *= fitScale;
+            }
+
+            // Centralizar na prancheta
+            posX = Math.round((state.docWidth - targetW) / 2);
+            posY = Math.round((state.docHeight - targetH) / 2);
         }
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.setAttribute('class', 'imported-svg-group');
+        if (defs) {
+            g.appendChild(defs.cloneNode(true));
+        }
 
-        // Centralizar na prancheta
-        const posX = Math.round((state.docWidth - targetW) / 2);
-        const posY = Math.round((state.docHeight - targetH) / 2);
-
-        if (Math.abs(scaleFactor - 1) > 0.001) {
+        if (Math.abs(scaleFactor - 1) > 0.001 || posX !== 0 || posY !== 0) {
             g.setAttribute('transform', `translate(${posX}, ${posY}) scale(${scaleFactor})`);
         } else {
             g.setAttribute('transform', `translate(${posX}, ${posY})`);
