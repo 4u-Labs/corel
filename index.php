@@ -583,7 +583,7 @@ $baseDir = './';
                 <i class="fas fa-mouse-pointer"></i> <span>X: 0.0 mm &nbsp; Y: 0.0 mm</span>
             </div>
             <div class="status-item" id="statusContextHint" style="color:#2563eb; font-weight:500;">
-                <span data-i18n="status_help_text">Segure CTRL para restringir proporção, ALT para transformar pelo centro.</span>
+                <span data-i18n="status_help_text">Arraste as quinas para redimensionar mantendo proporção (SHIFT para distorcer livremente).</span>
             </div>
         </div>
 

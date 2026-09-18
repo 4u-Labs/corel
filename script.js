@@ -503,7 +503,7 @@ function updateContextHint(tool) {
         fill: 'Clique e arraste para aplicar preenchimento interativo com gradiente.'
     };
 
-    el.textContent = hints[tool] || 'Segure CTRL para restringir proporção, ALT para transformar pelo centro.';
+    el.textContent = hints[tool] || 'Arraste as quinas para dimensionar mantendo proporção (SHIFT para distorcer).';
 }
 
 function initCanvasBoard() {
@@ -1296,37 +1296,99 @@ function handleTransformMove(e) {
     }
 
     // 8-Handle Resizing (Corel transform engine)
+    const isCorner = (handle === 'nw' || handle === 'ne' || handle === 'se' || handle === 'sw');
+    // Maintain aspect ratio automatically on corner handles (or when Ctrl is pressed).
+    // If Shift is pressed, user can freely distort even on corners.
+    const keepAspect = (isCorner && !e.shiftKey) || e.ctrlKey;
+
     let newX = origBox.x;
     let newY = origBox.y;
     let newW = origBox.width;
     let newH = origBox.height;
 
-    if (handle.includes('e')) {
-        newW = Math.max(10, origBox.width + dx);
-    }
-    if (handle.includes('s')) {
-        newH = Math.max(10, origBox.height + dy);
-    }
-    if (handle.includes('w')) {
-        newW = Math.max(10, origBox.width - dx);
-        newX = origBox.x + (origBox.width - newW);
-    }
-    if (handle.includes('n')) {
-        newH = Math.max(10, origBox.height - dy);
-        newY = origBox.y + (origBox.height - newH);
-    }
-
-    // Constrain aspect ratio if Ctrl is pressed or if corner handle
-    if (e.ctrlKey && origBox.width > 0 && origBox.height > 0) {
-        const ratio = origBox.width / origBox.height;
-        if (handle === 'e' || handle === 'w') {
+    if (keepAspect && origBox.width > 0 && origBox.height > 0) {
+        const ratio = origBox.width / origBox.height; // W / H
+        if (handle === 'se') {
+            // Anchor top-left (origBox.x, origBox.y)
+            const candW = Math.max(10, origBox.width + dx);
+            const candH = Math.max(10, origBox.height + dy);
+            // Escolhe a dimensão dominante pelo movimento do mouse
+            if (Math.abs(dx) >= Math.abs(dy * ratio)) {
+                newW = candW;
+                newH = newW / ratio;
+            } else {
+                newH = candH;
+                newW = newH * ratio;
+            }
+        } else if (handle === 'nw') {
+            // Anchor bottom-right (origBox.x + origBox.width, origBox.y + origBox.height)
+            const candW = Math.max(10, origBox.width - dx);
+            const candH = Math.max(10, origBox.height - dy);
+            if (Math.abs(dx) >= Math.abs(dy * ratio)) {
+                newW = candW;
+                newH = newW / ratio;
+            } else {
+                newH = candH;
+                newW = newH * ratio;
+            }
+            newX = origBox.x + (origBox.width - newW);
+            newY = origBox.y + (origBox.height - newH);
+        } else if (handle === 'ne') {
+            // Anchor bottom-left (origBox.x, origBox.y + origBox.height)
+            const candW = Math.max(10, origBox.width + dx);
+            const candH = Math.max(10, origBox.height - dy);
+            if (Math.abs(dx) >= Math.abs(dy * ratio)) {
+                newW = candW;
+                newH = newW / ratio;
+            } else {
+                newH = candH;
+                newW = newH * ratio;
+            }
+            newY = origBox.y + (origBox.height - newH);
+        } else if (handle === 'sw') {
+            // Anchor top-right (origBox.x + origBox.width, origBox.y)
+            const candW = Math.max(10, origBox.width - dx);
+            const candH = Math.max(10, origBox.height + dy);
+            if (Math.abs(dx) >= Math.abs(dy * ratio)) {
+                newW = candW;
+                newH = newW / ratio;
+            } else {
+                newH = candH;
+                newW = newH * ratio;
+            }
+            newX = origBox.x + (origBox.width - newW);
+        } else if (handle === 'e' || handle === 'w') {
+            if (handle === 'e') newW = Math.max(10, origBox.width + dx);
+            else {
+                newW = Math.max(10, origBox.width - dx);
+                newX = origBox.x + (origBox.width - newW);
+            }
             newH = newW / ratio;
+            newY = origBox.y + (origBox.height - newH) / 2; // expande proporcional do centro vertical
         } else if (handle === 'n' || handle === 's') {
+            if (handle === 's') newH = Math.max(10, origBox.height + dy);
+            else {
+                newH = Math.max(10, origBox.height - dy);
+                newY = origBox.y + (origBox.height - newH);
+            }
             newW = newH * ratio;
-        } else {
-            const side = Math.max(newW, newH * ratio);
-            newW = side;
-            newH = side / ratio;
+            newX = origBox.x + (origBox.width - newW) / 2; // expande proporcional do centro horizontal
+        }
+    } else {
+        // Redimensionamento livre (alças laterais n, s, e, w ou Shift pressionado nas quinas)
+        if (handle.includes('e')) {
+            newW = Math.max(10, origBox.width + dx);
+        }
+        if (handle.includes('s')) {
+            newH = Math.max(10, origBox.height + dy);
+        }
+        if (handle.includes('w')) {
+            newW = Math.max(10, origBox.width - dx);
+            newX = origBox.x + (origBox.width - newW);
+        }
+        if (handle.includes('n')) {
+            newH = Math.max(10, origBox.height - dy);
+            newY = origBox.y + (origBox.height - newH);
         }
     }
 

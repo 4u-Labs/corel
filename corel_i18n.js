@@ -173,7 +173,7 @@ const COREL_I18N = {
         hints_default: 'Selecione qualquer ferramenta na caixa lateral para visualizar instruções rápidas e atalhos de produção.',
 
         // Bottom Status Bar
-        status_help_text: 'Segure CTRL para restringir proporção, ALT para transformar pelo centro.',
+        status_help_text: 'Arraste as quinas para redimensionar mantendo proporção (SHIFT para distorcer livremente).',
         status_color_palette_name: 'Cores do Documento: CorelClone Pro 2026 (4u-labs)',
 
         // Layers Default Names
@@ -499,7 +499,7 @@ const COREL_I18N = {
         hints_default: 'Select any tool in the toolbox to view real-time hints and production shortcuts.',
 
         // Bottom Status Bar
-        status_help_text: 'Hold CTRL for aspect ratio, ALT to scale from center.',
+        status_help_text: 'Drag corners to resize while keeping aspect ratio (SHIFT to freely stretch).',
         status_color_palette_name: 'Document Colors: CorelClone Pro 2026 (4u-labs)',
 
         // Layers Default Names
