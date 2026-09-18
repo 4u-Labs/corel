@@ -2950,9 +2950,118 @@ function applyFountainFillFromModal() {
     closeFountainFillDialog();
 }
 
+// ==================== CorelDRAW Vector QR Code Engine ====================
+function openQrCodeDialog() {
+    const modal = document.getElementById('qrcodeModal');
+    if (modal) modal.style.display = 'flex';
+}
 
+function closeQrCodeDialog() {
+    const modal = document.getElementById('qrcodeModal');
+    if (modal) modal.style.display = 'none';
+}
 
-// ==================== Keyboard Shortcuts ====================
+function setQrType(type) {
+    const label = document.getElementById('qrContentLabel');
+    const input = document.getElementById('qrContentInput');
+    if (!label || !input) return;
+
+    if (type === 'url') {
+        label.textContent = 'URL do Site ou Link:';
+        input.placeholder = 'https://seusite.com.br';
+    } else if (type === 'whatsapp') {
+        label.textContent = 'Link Direto do WhatsApp (com DDD):';
+        input.placeholder = 'https://wa.me/5511999999999';
+    } else if (type === 'pix') {
+        label.textContent = 'Chave PIX ou Código Copia e Cola:';
+        input.placeholder = 'suachave@pix.com.br ou 00020126580014br.gov.bcb.pix...';
+    } else if (type === 'text') {
+        label.textContent = 'Texto Livre:';
+        input.placeholder = 'Digite qualquer texto ou informação aqui...';
+    }
+}
+
+function generateAndInsertQrCode() {
+    const text = document.getElementById('qrContentInput')?.value?.trim();
+    if (!text) {
+        toast('Digite o link, chave PIX ou texto do QR Code.', 'warn');
+        return;
+    }
+
+    if (typeof QRCode === 'undefined') {
+        toast('Motor QRCode não carregado.', 'err');
+        return;
+    }
+
+    const sizeMm = parseFloat(document.getElementById('qrSizeInput')?.value || '40') || 40;
+    const colorDark = document.getElementById('qrColorDark')?.value || '#000000';
+    const transparentBg = document.getElementById('qrTransparentBg')?.checked ?? true;
+    const ecc = document.getElementById('qrEccLevel')?.value || 'M';
+
+    // Cria elemento temporário para renderizar o QR em SVG
+    const tempDiv = document.createElement('div');
+    tempDiv.style.display = 'none';
+    document.body.appendChild(tempDiv);
+
+    try {
+        new QRCode(tempDiv, {
+            text: text,
+            width: 256,
+            height: 256,
+            colorDark: colorDark,
+            colorLight: transparentBg ? '#ffffff' : '#ffffff',
+            correctLevel: QRCode.CorrectLevel[ecc] || QRCode.CorrectLevel.M,
+            useSVG: true
+        });
+
+        // Aguarda geração do SVG pelo qrcodejs
+        const generatedSvg = tempDiv.querySelector('svg');
+        if (!generatedSvg) {
+            toast('Erro ao gerar código vetorial do QR Code.', 'err');
+            tempDiv.remove();
+            return;
+        }
+
+        const sizePx = sizeMm * 3.7795275591;
+        const posX = Math.round((state.docWidth - sizePx) / 2);
+        const posY = Math.round((state.docHeight - sizePx) / 2);
+
+        const qrGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        qrGroup.setAttribute('class', 'corel-qrcode-group user-group');
+
+        // Calcula escala para o tamanho desejado
+        const nativeW = parseFloat(generatedSvg.getAttribute('width')) || 256;
+        const scale = sizePx / nativeW;
+        qrGroup.setAttribute('transform', `translate(${posX}, ${posY}) scale(${scale.toFixed(4)})`);
+
+        // Transfere os elementos SVG
+        Array.from(generatedSvg.children).forEach((child, idx) => {
+            // Se for o primeiro rect e o usuário quis fundo transparente, ignora o fundo branco
+            if (transparentBg && idx === 0 && child.tagName.toLowerCase() === 'rect') {
+                return;
+            }
+            qrGroup.appendChild(child.cloneNode(true));
+        });
+
+        const layerGroup = document.getElementById('layerGroupMain');
+        if (layerGroup) {
+            layerGroup.appendChild(qrGroup);
+            selectElement(qrGroup, false);
+            saveState('Inserir QR Code');
+            updateLayersTree();
+            updatePropertyBar();
+            toast(`⚡ QR Code vetorial de ${sizeMm}mm inserido na prancheta!`, 'ok');
+        }
+
+        closeQrCodeDialog();
+    } catch (err) {
+        console.error('Erro na geração do QR Code:', err);
+        toast('Erro ao gerar QR Code.', 'err');
+    } finally {
+        tempDiv.remove();
+    }
+}
+
 function initKeyboardShortcuts() {
     // ---- Bloquear zoom nativo do browser em toda a janela ----
     window.addEventListener('wheel', (e) => {

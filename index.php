@@ -29,6 +29,7 @@ $baseDir = './';
     <!-- Vectorization & Geometry Engines -->
     <script src="libs/imagetracer.js"></script>
     <script src="libs/paper-full.min.js"></script>
+    <script src="libs/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -115,6 +116,9 @@ $baseDir = './';
                     <!-- PowerClip CorelDRAW -->
                     <button type="button" class="dropdown-item" onclick="applyPowerClip()"><i class="fas fa-sign-in-alt text-amber-600"></i> PowerClip: Colocar no Recipiente...</button>
                     <button type="button" class="dropdown-item" onclick="extractPowerClip()"><i class="fas fa-sign-out-alt text-amber-600"></i> PowerClip: Extrair Conteúdo</button>
+                    <div class="dropdown-separator"></div>
+                    <!-- CorelDRAW QR Code -->
+                    <button type="button" class="dropdown-item" onclick="openQrCodeDialog()"><i class="fas fa-qrcode text-emerald-600"></i> Inserir Código QR Code...</button>
                     <div class="dropdown-separator"></div>
                     <button type="button" class="dropdown-item" onclick="orderSelected('front')"><i class="fas fa-angle-double-up"></i> Trazer para Frente <span class="shortcut">Shift+PgUp</span></button>
                     <button type="button" class="dropdown-item" onclick="orderSelected('back')"><i class="fas fa-angle-double-down"></i> Enviar para Trás <span class="shortcut">Shift+PgDn</span></button>
@@ -793,6 +797,68 @@ $baseDir = './';
             <button type="button" class="btn-secondary" onclick="closeFountainFillDialog()">Cancelar</button>
             <button type="button" class="btn-primary" onclick="applyFountainFillFromModal()" style="background:#7c3aed; border-color:#6d28d9; padding:7px 16px;">
                 <i class="fas fa-fill"></i> Aplicar Gradiente
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== QR Code Generator Modal ==================== -->
+<div id="qrcodeModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" style="width: 480px; max-width:95vw;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fas fa-qrcode text-emerald-600"></i> Inserir Código QR Code Vetorial</div>
+            <button type="button" class="btn-win-ctl" onclick="closeQrCodeDialog()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom:10px;">
+                <label style="font-size:11.5px; font-weight:600; color:#333; display:block; margin-bottom:4px;">Tipo de Conteúdo:</label>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn-secondary" style="font-size:11px; padding:3px 8px;" onclick="setQrType('url')"><i class="fas fa-link text-blue-600"></i> Link / Site</button>
+                    <button type="button" class="btn-secondary" style="font-size:11px; padding:3px 8px;" onclick="setQrType('whatsapp')"><i class="fab fa-whatsapp text-green-600"></i> WhatsApp</button>
+                    <button type="button" class="btn-secondary" style="font-size:11px; padding:3px 8px;" onclick="setQrType('pix')"><i class="fas fa-money-bill-wave text-teal-600"></i> Chave PIX</button>
+                    <button type="button" class="btn-secondary" style="font-size:11px; padding:3px 8px;" onclick="setQrType('text')"><i class="fas fa-font"></i> Texto</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label id="qrContentLabel" style="font-size:11.5px; font-weight:600; color:#333; display:block; margin-bottom:4px;">URL do Site ou Link:</label>
+                <textarea id="qrContentInput" class="objects-search-input" style="height:54px; padding:6px; resize:none; font-family:monospace; font-size:11.5px;" placeholder="https://seusite.com.br"></textarea>
+            </div>
+
+            <div style="background:#f9f9f9; border:1px solid #e0e0e0; border-radius:4px; padding:10px; margin-bottom:10px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Tamanho Inicial na Prancheta:</label>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <input type="number" id="qrSizeInput" class="prop-input" value="40" min="10" max="300" style="width:60px;">
+                        <span style="font-size:11px; color:#666;">mm</span>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Cor dos Módulos (QR):</label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="color" id="qrColorDark" value="#000000" style="width:32px; height:24px; border:1px solid #ccc; border-radius:3px; cursor:pointer;">
+                        <label style="font-size:11px; color:#555; display:flex; align-items:center; gap:4px; cursor:pointer;">
+                            <input type="checkbox" id="qrTransparentBg" checked> Fundo Transparente (Sem quadrado branco)
+                        </label>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11.5px; font-weight:600; color:#333;">Correção de Erro (ECC):</label>
+                    <select id="qrEccLevel" class="corel-select" style="width:160px; font-size:11px;">
+                        <option value="M" selected>Médio (M - 15%)</option>
+                        <option value="L">Baixo (L - 7%)</option>
+                        <option value="Q">Alto (Q - 25%)</option>
+                        <option value="H">Máximo (H - 30% p/ Logos)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeQrCodeDialog()">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="generateAndInsertQrCode()" style="background:#059669; border-color:#047857; padding:7px 16px;">
+                <i class="fas fa-qrcode"></i> Inserir na Prancheta
             </button>
         </div>
     </div>
