@@ -18,14 +18,19 @@ $baseDir = './';
     <title>CorelClone Pro 2026 (64-Bit) — [Documento 1] @ 100%</title>
     <base href="<?php echo htmlspecialchars($baseDir); ?>">
 
-    <!-- PWA & Mobile Web App Meta -->
-    <link rel="manifest" href="manifest.json">
+    <!-- PWA & Mobile Web App Meta (Imagem com nome CorelClone) -->
+    <link rel="manifest" href="manifest.json?v=<?php echo $v; ?>">
     <meta name="theme-color" content="#1e2124">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CorelClone">
-    <link rel="apple-touch-icon" href="corelicon-192.png">
-    <link rel="icon" type="image/png" href="corelicon.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    
+    <!-- Favicon Oficial (Imagem 1 sem texto, otimizada para abas) -->
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="icon" type="image/png" href="favicon.png">
 
     <!-- Styles & Fonts -->
     <link rel="stylesheet" href="style.css?v=<?php echo $v; ?>">
@@ -49,7 +54,7 @@ $baseDir = './';
         <!-- Level 1: App Title & Main Menu Bar -->
         <div class="window-title-bar">
             <div class="window-title-left">
-                <span class="corel-app-icon"><img src="corelicon.png" alt="CorelClone"></span>
+                <span class="corel-app-icon"><img src="favicon-32x32.png" alt="CorelClone"></span>
                 <span class="window-title-text" id="windowTitleText">CorelClone Pro 2026 (64-Bit) — [Documento 1] @ 100%</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">

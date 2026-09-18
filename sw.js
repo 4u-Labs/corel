@@ -1,11 +1,17 @@
-const CACHE_NAME = 'corelclone-v2-cache';
+const CACHE_NAME = 'corelclone-v3-cache';
 const ASSETS = [
   './',
   './index.php',
   './style.css',
   './script.js',
+  './favicon.png',
+  './favicon.ico',
+  './favicon-32x32.png',
+  './favicon-16x16.png',
   './corelicon.png',
   './corelicon-192.png',
+  './apple-touch-icon.png',
+  './corelicon-welcome.png',
   './corelicon.svg',
   './libs/paper-full.min.js',
   './libs/qrcode.min.js',

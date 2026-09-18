@@ -89,8 +89,60 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('verticalPaletteSwatches').addEventListener('contextmenu', e => e.preventDefault());
     document.getElementById('canvasScroller').addEventListener('contextmenu', e => e.preventDefault());
 
+    // Check first run to display CorelClone welcome art on canvas
+    checkAndLoadWelcomeArt();
+
     toast('CorelClone Pro 2026 pronto para criação vetorial!', 'ok');
 });
+
+// ==================== First Run Welcome Art ====================
+const WELCOME_ART_KEY = 'corelclone_welcome_v1';
+
+function checkAndLoadWelcomeArt() {
+    let hasShown = false;
+    try {
+        hasShown = !!localStorage.getItem(WELCOME_ART_KEY);
+    } catch (e) {}
+
+    if (!hasShown) {
+        try {
+            localStorage.setItem(WELCOME_ART_KEY, 'true');
+        } catch (e) {}
+        loadWelcomeArtOnCanvas();
+    }
+}
+
+function loadWelcomeArtOnCanvas() {
+    const layerGroup = document.getElementById('layerGroupMain');
+    if (!layerGroup || layerGroup.children.length > 0) return;
+
+    const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+    img.setAttribute('href', 'corelicon-welcome.png');
+    img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+    // Exact coordinates matching printscreen: X=45mm, Y=24mm, L=216mm, A=159mm
+    const x = Math.round(45 * UNIT_FACTORS.mm);
+    const y = Math.round(24 * UNIT_FACTORS.mm);
+    const w = Math.round(216 * UNIT_FACTORS.mm);
+    const h = Math.round(159 * UNIT_FACTORS.mm);
+
+    img.setAttribute('x', x.toString());
+    img.setAttribute('y', y.toString());
+    img.setAttribute('width', w.toString());
+    img.setAttribute('height', h.toString());
+
+    layerGroup.appendChild(img);
+
+    setTimeout(() => {
+        selectElement(img, false);
+        updateLayersTree();
+        updatePropertyBar();
+        updateStatusDimensions();
+        saveState('Boas-vindas CorelClone');
+    }, 150);
+}
+
+window.loadWelcomeArtOnCanvas = loadWelcomeArtOnCanvas;
 
 // ==================== Vertical Corel Color Palette ====================
 function initVerticalPalette() {
