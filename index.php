@@ -1,5 +1,5 @@
 <?php
-// Garantir redirecionamento com barra final caso seja acessado sem ela (ex: /app/corel2 -> /app/corel2/)
+// Garantir redirecionamento com barra final caso seja acessado sem ela (ex: /app/corel -> /app/corel/)
 $reqUri = $_SERVER['REQUEST_URI'] ?? '';
 $path = parse_url($reqUri, PHP_URL_PATH);
 if (!str_ends_with($path, '/') && !str_ends_with($path, '.php')) {
@@ -1144,7 +1144,7 @@ $baseDir = './';
                             <div style="font-size:12px; font-weight:700; color:#1e293b;">Windows</div>
                             <span style="font-size:10px; color:#64748b; display:block; margin-bottom:8px;">Windows 10 / 11 (64-Bit)</span>
                         </div>
-                        <a href="https://github.com/4u-Labs/corel2/releases/latest/download/CorelClone-Setup.exe" target="_blank" class="btn btn-primary" style="background:#0284c7; border-color:#0369a1; text-decoration:none; font-size:11px; padding:6px 8px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; gap:5px; color:#fff; font-weight:600;">
+                        <a href="https://github.com/4u-Labs/corel/releases/latest/download/CorelClone-Setup.exe" target="_blank" class="btn btn-primary" style="background:#0284c7; border-color:#0369a1; text-decoration:none; font-size:11px; padding:6px 8px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; gap:5px; color:#fff; font-weight:600;">
                             <i class="fas fa-download"></i> Baixar .EXE
                         </a>
                     </div>
@@ -1156,7 +1156,7 @@ $baseDir = './';
                             <div style="font-size:12px; font-weight:700; color:#1e293b;">macOS</div>
                             <span style="font-size:10px; color:#64748b; display:block; margin-bottom:8px;">Apple M1/M2/M3 & Intel</span>
                         </div>
-                        <a href="https://github.com/4u-Labs/corel2/releases/latest/download/CorelClone.dmg" target="_blank" class="btn btn-primary" style="background:#334155; border-color:#1e293b; text-decoration:none; font-size:11px; padding:6px 8px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; gap:5px; color:#fff; font-weight:600;">
+                        <a href="https://github.com/4u-Labs/corel/releases/latest/download/CorelClone.dmg" target="_blank" class="btn btn-primary" style="background:#334155; border-color:#1e293b; text-decoration:none; font-size:11px; padding:6px 8px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; gap:5px; color:#fff; font-weight:600;">
                             <i class="fas fa-download"></i> Baixar .DMG
                         </a>
                     </div>
@@ -1168,7 +1168,7 @@ $baseDir = './';
                             <div style="font-size:12px; font-weight:700; color:#1e293b;">Linux</div>
                             <span style="font-size:10px; color:#64748b; display:block; margin-bottom:8px;">Ubuntu, Zorin, Mint, Debian</span>
                         </div>
-                        <a href="https://github.com/4u-Labs/corel2/releases/latest/download/CorelClone.AppImage" target="_blank" class="btn btn-primary" style="background:#d97706; border-color:#b45309; text-decoration:none; font-size:11px; padding:6px 8px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; gap:5px; color:#fff; font-weight:600;">
+                        <a href="https://github.com/4u-Labs/corel/releases/latest/download/CorelClone.AppImage" target="_blank" class="btn btn-primary" style="background:#d97706; border-color:#b45309; text-decoration:none; font-size:11px; padding:6px 8px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; gap:5px; color:#fff; font-weight:600;">
                             <i class="fas fa-download"></i> Baixar .AppImage
                         </a>
                     </div>

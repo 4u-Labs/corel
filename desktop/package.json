@@ -2,7 +2,7 @@
   "name": "corelclone-pro",
   "version": "2.0.0",
   "description": "CorelClone Pro 2026 — Vector Graphics Editor for Windows, Mac and Linux",
-  "homepage": "https://4u.ia.br/app/corel2/",
+  "homepage": "https://4u.ia.br/app/corel/",
   "author": {
     "name": "4u Labs",
     "email": "contato@4u.ia.br"
@@ -15,7 +15,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/4u-Labs/corel2.git"
+    "url": "https://github.com/4u-Labs/corel.git"
   },
   "devDependencies": {
     "electron": "^31.0.0",
@@ -28,7 +28,7 @@
       {
         "provider": "github",
         "owner": "4u-Labs",
-        "repo": "corel2",
+        "repo": "corel",
         "releaseType": "release"
       }
     ],

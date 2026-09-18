@@ -21,7 +21,7 @@ function createWindow() {
   });
 
   mainWindow.setMenuBarVisibility(false);
-  mainWindow.loadURL('http://127.0.0.1:54321/corel2/');
+  mainWindow.loadURL('http://127.0.0.1:54321/corel/');
 
   mainWindow.on('closed', () => {
     mainWindow = null;
