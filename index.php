@@ -79,18 +79,18 @@ $baseDir = './';
             <div class="menu-item">
                 <button type="button" class="menu-btn" data-i18n="menu_file">Arquivo</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="newDocument()"><i class="fas fa-file"></i> <span data-i18n="menu_new">Novo</span> <span class="shortcut">Ctrl+N</span></button>
-                    <button type="button" class="dropdown-item" onclick="document.getElementById('importFileInput').click()"><i class="fas fa-folder-open text-emerald-600"></i> <span data-i18n="menu_open">Abrir .CDR / .PDF / SVG...</span> <span class="shortcut">Ctrl+O</span></button>
-                    <button type="button" class="dropdown-item" onclick="saveProjectJSON()"><i class="fas fa-save"></i> <span data-i18n="menu_save_svg">Salvar Projeto</span> <span class="shortcut">Ctrl+S</span></button>
+                    <button type="button" class="dropdown-item" onclick="newDocument()"><i class="fas fa-file"></i> <span class="menu-label" data-i18n="menu_new">Novo...</span> <span class="shortcut">Ctrl+N</span></button>
+                    <button type="button" class="dropdown-item" onclick="document.getElementById('importFileInput').click()"><i class="fas fa-folder-open text-emerald-600"></i> <span class="menu-label" data-i18n="menu_open">Abrir...</span> <span class="shortcut">Ctrl+O</span></button>
+                    <button type="button" class="dropdown-item" onclick="saveProjectJSON()"><i class="fas fa-save"></i> <span class="menu-label" data-i18n="menu_save_svg">Salvar</span> <span class="shortcut">Ctrl+S</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="exportDocument('svg')"><i class="fas fa-file-code"></i> <span data-i18n="act_exp_svg">Exportar como SVG...</span></button>
-                    <button type="button" class="dropdown-item" onclick="exportDocument('pdf')"><i class="fas fa-file-pdf"></i> <span data-i18n="act_exp_pdf">Exportar como PDF...</span></button>
-                    <button type="button" class="dropdown-item" onclick="exportDocument('png')"><i class="fas fa-file-image"></i> <span data-i18n="act_exp_png">Exportar como PNG HD...</span></button>
+                    <button type="button" class="dropdown-item" onclick="exportDocument('svg')"><i class="fas fa-file-code"></i> <span class="menu-label" data-i18n="menu_export_svg">Exportar SVG...</span></button>
+                    <button type="button" class="dropdown-item" onclick="exportDocument('pdf')"><i class="fas fa-file-pdf"></i> <span class="menu-label" data-i18n="menu_export_pdf">Exportar PDF...</span></button>
+                    <button type="button" class="dropdown-item" onclick="exportDocument('png')"><i class="fas fa-file-image"></i> <span class="menu-label" data-i18n="menu_export_png">Exportar PNG...</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="openPrintExportDialog()"><i class="fas fa-print text-red-600"></i> <span data-i18n="menu_prepress">Preparar para Impressão / Gráfica...</span> <span class="shortcut">Ctrl+P</span></button>
-                    <button type="button" class="dropdown-item" onclick="openLocalBridgeApp()"><i class="fas fa-desktop text-cyan-600"></i> <span data-i18n="menu_open_cdr">Abrir no App Local (100% CDR)...</span></button>
+                    <button type="button" class="dropdown-item" onclick="openPrintExportDialog()"><i class="fas fa-print text-red-600"></i> <span class="menu-label" data-i18n="menu_prepress">Pré-impressão e Sangria...</span> <span class="shortcut">Ctrl+P</span></button>
+                    <button type="button" class="dropdown-item" onclick="openLocalBridgeApp()"><i class="fas fa-desktop text-cyan-600"></i> <span class="menu-label" data-i18n="menu_open_cdr">Importar Corel (.CDR)...</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="openDownloadDesktopModal()"><i class="fas fa-download text-emerald-600"></i> <span data-i18n="menu_download_desktop">Baixar para Computador (Win / Mac / Linux)...</span></button>
+                    <button type="button" class="dropdown-item" onclick="openDownloadDesktopModal()"><i class="fas fa-download text-emerald-600"></i> <span class="menu-label" data-i18n="menu_download_desktop">Baixar App para Computador...</span></button>
                 </div>
             </div>
 
@@ -98,15 +98,15 @@ $baseDir = './';
             <div class="menu-item">
                 <button type="button" class="menu-btn" data-i18n="menu_edit">Editar</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="undo()"><i class="fas fa-undo"></i> <span data-i18n="menu_undo">Desfazer</span> <span class="shortcut">Ctrl+Z</span></button>
-                    <button type="button" class="dropdown-item" onclick="redo()"><i class="fas fa-redo"></i> <span data-i18n="menu_redo">Refazer</span> <span class="shortcut">Ctrl+Y</span></button>
+                    <button type="button" class="dropdown-item" onclick="undo()"><i class="fas fa-undo"></i> <span class="menu-label" data-i18n="menu_undo">Desfazer</span> <span class="shortcut">Ctrl+Z</span></button>
+                    <button type="button" class="dropdown-item" onclick="redo()"><i class="fas fa-redo"></i> <span class="menu-label" data-i18n="menu_redo">Refazer</span> <span class="shortcut">Ctrl+Y</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="duplicateSelected()"><i class="fas fa-clone"></i> <span data-i18n="menu_duplicate">Duplicar</span> <span class="shortcut">Ctrl+D</span></button>
-                    <button type="button" class="dropdown-item" onclick="repeatTransform()"><i class="fas fa-redo text-amber-500"></i> <span data-i18n="menu_repeat">Repetir / Duplicar com Passo</span> <span class="shortcut">Ctrl+R</span></button>
-                    <button type="button" class="dropdown-item" onclick="deleteSelected()"><i class="fas fa-trash"></i> <span data-i18n="menu_delete">Excluir</span> <span class="shortcut">Delete</span></button>
-                    <button type="button" class="dropdown-item" onclick="selectAll()"><i class="fas fa-object-group"></i> <span data-i18n="menu_select_all">Selecionar Tudo</span> <span class="shortcut">Ctrl+A</span></button>
+                    <button type="button" class="dropdown-item" onclick="duplicateSelected()"><i class="fas fa-clone"></i> <span class="menu-label" data-i18n="menu_duplicate">Duplicar</span> <span class="shortcut">Ctrl+D</span></button>
+                    <button type="button" class="dropdown-item" onclick="repeatTransform()"><i class="fas fa-redo text-amber-500"></i> <span class="menu-label" data-i18n="menu_repeat">Repetir com Passo</span> <span class="shortcut">Ctrl+R</span></button>
+                    <button type="button" class="dropdown-item" onclick="deleteSelected()"><i class="fas fa-trash"></i> <span class="menu-label" data-i18n="menu_delete">Excluir</span> <span class="shortcut">Delete</span></button>
+                    <button type="button" class="dropdown-item" onclick="selectAll()"><i class="fas fa-object-group"></i> <span class="menu-label" data-i18n="menu_select_all">Selecionar Todos</span> <span class="shortcut">Ctrl+A</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="openFountainFillDialog()"><i class="fas fa-fill text-purple-600"></i> <span data-i18n="fountain_modal_title">Preenchimento Gradiente...</span> <span class="shortcut">F11</span></button>
+                    <button type="button" class="dropdown-item" onclick="openFountainFillDialog()"><i class="fas fa-fill text-purple-600"></i> <span class="menu-label" data-i18n="menu_gradient">Preenchimento Gradiente...</span> <span class="shortcut">F11</span></button>
                 </div>
             </div>
 
@@ -114,11 +114,11 @@ $baseDir = './';
             <div class="menu-item">
                 <button type="button" class="menu-btn" data-i18n="menu_view">Exibir</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="setZoom(1.0)"><i class="fas fa-search"></i> <span data-i18n="menu_zoom_100">Tamanho Real (100%)</span></button>
-                    <button type="button" class="dropdown-item" onclick="zoomFitPage()"><i class="fas fa-expand"></i> <span data-i18n="menu_zoom_page">Ajustar à Página</span> <span class="shortcut">F4</span></button>
+                    <button type="button" class="dropdown-item" onclick="setZoom(1.0)"><i class="fas fa-search"></i> <span class="menu-label" data-i18n="menu_zoom_100">Tamanho Real (100%)</span></button>
+                    <button type="button" class="dropdown-item" onclick="zoomFitPage()"><i class="fas fa-expand"></i> <span class="menu-label" data-i18n="menu_zoom_page">Ajustar à Página</span> <span class="shortcut">F4</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="toggleRulers()"><i class="fas fa-ruler"></i> <span data-i18n="menu_rulers">Mostrar Réguas</span></button>
-                    <button type="button" class="dropdown-item" onclick="toggleGuidelines()"><i class="fas fa-border-all"></i> <span data-i18n="menu_guidelines">Mostrar Linhas-Guia</span></button>
+                    <button type="button" class="dropdown-item" onclick="toggleRulers()"><i class="fas fa-ruler"></i> <span class="menu-label" data-i18n="menu_rulers">Mostrar Réguas</span></button>
+                    <button type="button" class="dropdown-item" onclick="toggleGuidelines()"><i class="fas fa-border-all"></i> <span class="menu-label" data-i18n="menu_guidelines">Mostrar Linhas-Guia</span></button>
                 </div>
             </div>
 
@@ -126,37 +126,37 @@ $baseDir = './';
             <div class="menu-item">
                 <button type="button" class="menu-btn" data-i18n="menu_object">Objeto</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="groupSelected()"><i class="fas fa-object-group"></i> <span data-i18n="menu_group">Agrupar</span> <span class="shortcut">Ctrl+G</span></button>
-                    <button type="button" class="dropdown-item" onclick="ungroupSelected()"><i class="fas fa-object-ungroup"></i> <span data-i18n="menu_ungroup">Desagrupar</span> <span class="shortcut">Ctrl+U</span></button>
+                    <button type="button" class="dropdown-item" onclick="groupSelected()"><i class="fas fa-object-group"></i> <span class="menu-label" data-i18n="menu_group">Agrupar</span> <span class="shortcut">Ctrl+G</span></button>
+                    <button type="button" class="dropdown-item" onclick="ungroupSelected()"><i class="fas fa-object-ungroup"></i> <span class="menu-label" data-i18n="menu_ungroup">Desagrupar</span> <span class="shortcut">Ctrl+U</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="convertSelectedToCurves()"><i class="fas fa-bezier-curve"></i> <span data-i18n="layer_bezier_curve">Converter em Curvas</span> <span class="shortcut">Ctrl+Q</span></button>
+                    <button type="button" class="dropdown-item" onclick="convertSelectedToCurves()"><i class="fas fa-bezier-curve"></i> <span class="menu-label" data-i18n="layer_bezier_curve">Converter em Curvas</span> <span class="shortcut">Ctrl+Q</span></button>
                     <div class="dropdown-separator"></div>
                     <!-- CorelDRAW Align & Distribute -->
-                    <button type="button" class="dropdown-item" onclick="alignSelected('P')"><i class="fas fa-crosshairs text-blue-600"></i> <span data-i18n="menu_align_page">Centralizar na Página</span> <span class="shortcut">P</span></button>
-                    <button type="button" class="dropdown-item" onclick="alignSelected('C')"><i class="fas fa-arrows-alt-h text-cyan-600"></i> <span data-i18n="menu_align_center_h">Centralizar Horizontal</span> <span class="shortcut">C</span></button>
-                    <button type="button" class="dropdown-item" onclick="alignSelected('E')"><i class="fas fa-arrows-alt-v text-cyan-600"></i> <span data-i18n="menu_align_center_v">Centralizar Vertical</span> <span class="shortcut">E</span></button>
-                    <button type="button" class="dropdown-item" onclick="alignSelected('L')"><i class="fas fa-align-left"></i> <span data-i18n="menu_align_left">Alinhar à Esquerda</span> <span class="shortcut">L</span></button>
-                    <button type="button" class="dropdown-item" onclick="alignSelected('R')"><i class="fas fa-align-right"></i> <span data-i18n="menu_align_right">Alinhar à Direita</span> <span class="shortcut">R</span></button>
-                    <button type="button" class="dropdown-item" onclick="alignSelected('T')"><i class="fas fa-arrow-up"></i> <span data-i18n="menu_align_top">Alinhar pelo Topo</span> <span class="shortcut">T</span></button>
-                    <button type="button" class="dropdown-item" onclick="alignSelected('B')"><i class="fas fa-arrow-down"></i> <span data-i18n="menu_align_bottom">Alinhar pela Base</span> <span class="shortcut">B</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('P')"><i class="fas fa-crosshairs text-blue-600"></i> <span class="menu-label" data-i18n="menu_align_page">Centralizar na Página</span> <span class="shortcut">P</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('C')"><i class="fas fa-arrows-alt-h text-cyan-600"></i> <span class="menu-label" data-i18n="menu_align_center_h">Centralizar Horizontal</span> <span class="shortcut">C</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('E')"><i class="fas fa-arrows-alt-v text-cyan-600"></i> <span class="menu-label" data-i18n="menu_align_center_v">Centralizar Vertical</span> <span class="shortcut">E</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('L')"><i class="fas fa-align-left"></i> <span class="menu-label" data-i18n="menu_align_left">Alinhar à Esquerda</span> <span class="shortcut">L</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('R')"><i class="fas fa-align-right"></i> <span class="menu-label" data-i18n="menu_align_right">Alinhar à Direita</span> <span class="shortcut">R</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('T')"><i class="fas fa-arrow-up"></i> <span class="menu-label" data-i18n="menu_align_top">Alinhar pelo Topo</span> <span class="shortcut">T</span></button>
+                    <button type="button" class="dropdown-item" onclick="alignSelected('B')"><i class="fas fa-arrow-down"></i> <span class="menu-label" data-i18n="menu_align_bottom">Alinhar pela Base</span> <span class="shortcut">B</span></button>
                     <div class="dropdown-separator"></div>
                     <!-- CorelDRAW Espelhar / Flip -->
-                    <button type="button" class="dropdown-item" onclick="flipSelected('horizontal')"><i class="fas fa-arrows-alt-h text-indigo-600"></i> <span data-i18n="menu_flip_h">Espelhar Horizontalmente</span></button>
-                    <button type="button" class="dropdown-item" onclick="flipSelected('vertical')"><i class="fas fa-arrows-alt-v text-indigo-600"></i> <span data-i18n="menu_flip_v">Espelhar Verticalmente</span></button>
+                    <button type="button" class="dropdown-item" onclick="flipSelected('horizontal')"><i class="fas fa-arrows-alt-h text-indigo-600"></i> <span class="menu-label" data-i18n="menu_flip_h">Espelhar Horizontalmente</span></button>
+                    <button type="button" class="dropdown-item" onclick="flipSelected('vertical')"><i class="fas fa-arrows-alt-v text-indigo-600"></i> <span class="menu-label" data-i18n="menu_flip_v">Espelhar Verticalmente</span></button>
                     <div class="dropdown-separator"></div>
                     <!-- PowerClip CorelDRAW -->
-                    <button type="button" class="dropdown-item" onclick="applyPowerClip()"><i class="fas fa-sign-in-alt text-amber-600"></i> <span data-i18n="menu_pc_place">PowerClip: Colocar no Recipiente...</span></button>
-                    <button type="button" class="dropdown-item" onclick="extractPowerClip()"><i class="fas fa-sign-out-alt text-amber-600"></i> <span data-i18n="menu_pc_extract">PowerClip: Extrair Conteúdo</span></button>
+                    <button type="button" class="dropdown-item" onclick="applyPowerClip()"><i class="fas fa-sign-in-alt text-amber-600"></i> <span class="menu-label" data-i18n="menu_pc_place">PowerClip: Inserir...</span></button>
+                    <button type="button" class="dropdown-item" onclick="extractPowerClip()"><i class="fas fa-sign-out-alt text-amber-600"></i> <span class="menu-label" data-i18n="menu_pc_extract">PowerClip: Extrair</span></button>
                     <div class="dropdown-separator"></div>
                     <!-- CorelDRAW QR Code -->
-                    <button type="button" class="dropdown-item" onclick="openQrCodeDialog()"><i class="fas fa-qrcode text-emerald-600"></i> <span data-i18n="qr_modal_title">Inserir Código QR Code...</span></button>
+                    <button type="button" class="dropdown-item" onclick="openQrCodeDialog()"><i class="fas fa-qrcode text-emerald-600"></i> <span class="menu-label" data-i18n="menu_qrcode">Inserir QR Code...</span></button>
                     <div class="dropdown-separator"></div>
                     <!-- CorelDRAW Text on Path -->
-                    <button type="button" class="dropdown-item" onclick="fitTextToPath()"><i class="fas fa-italic text-sky-600"></i> <span data-i18n="menu_text_path">Ajustar Texto ao Caminho...</span></button>
-                    <button type="button" class="dropdown-item" onclick="separateTextFromPath()"><i class="fas fa-unlink text-sky-600"></i> <span data-i18n="prop_sep_path_btn">Separar Texto do Caminho</span></button>
+                    <button type="button" class="dropdown-item" onclick="fitTextToPath()"><i class="fas fa-italic text-sky-600"></i> <span class="menu-label" data-i18n="menu_text_path">Ajustar Texto ao Caminho...</span></button>
+                    <button type="button" class="dropdown-item" onclick="separateTextFromPath()"><i class="fas fa-unlink text-sky-600"></i> <span class="menu-label" data-i18n="prop_sep_path_btn">Separar Texto do Caminho</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="orderSelected('front')"><i class="fas fa-angle-double-up"></i> <span data-i18n="menu_bring_front">Trazer para Frente</span> <span class="shortcut">Shift+PgUp</span></button>
-                    <button type="button" class="dropdown-item" onclick="orderSelected('back')"><i class="fas fa-angle-double-down"></i> <span data-i18n="menu_send_back">Enviar para Trás</span> <span class="shortcut">Shift+PgDn</span></button>
+                    <button type="button" class="dropdown-item" onclick="orderSelected('front')"><i class="fas fa-angle-double-up"></i> <span class="menu-label" data-i18n="menu_bring_front">Trazer para Frente</span> <span class="shortcut">Shift+PgUp</span></button>
+                    <button type="button" class="dropdown-item" onclick="orderSelected('back')"><i class="fas fa-angle-double-down"></i> <span class="menu-label" data-i18n="menu_send_back">Enviar para Trás</span> <span class="shortcut">Shift+PgDn</span></button>
                 </div>
             </div>
 
@@ -164,12 +164,12 @@ $baseDir = './';
             <div class="menu-item">
                 <button type="button" class="menu-btn" data-i18n="menu_effects">Modelar</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="booleanOperation('weld')"><i class="fas fa-layer-group"></i> <span>Soldar (Weld)</span></button>
-                    <button type="button" class="dropdown-item" onclick="booleanOperation('trim')"><i class="fas fa-cut"></i> <span>Aparar (Trim)</span></button>
-                    <button type="button" class="dropdown-item" onclick="booleanOperation('intersect')"><i class="fas fa-circle-notch"></i> <span>Interseção (Intersect)</span></button>
+                    <button type="button" class="dropdown-item" onclick="booleanOperation('weld')"><i class="fas fa-layer-group"></i> <span class="menu-label">Soldar (Weld)</span></button>
+                    <button type="button" class="dropdown-item" onclick="booleanOperation('trim')"><i class="fas fa-cut"></i> <span class="menu-label">Aparar (Trim)</span></button>
+                    <button type="button" class="dropdown-item" onclick="booleanOperation('intersect')"><i class="fas fa-circle-notch"></i> <span class="menu-label">Interseção (Intersect)</span></button>
                     <div class="dropdown-separator"></div>
-                    <button type="button" class="dropdown-item" onclick="openContourDialog()"><i class="fas fa-bullseye text-pink-600"></i> <span data-i18n="menu_contour">Contorno / Borda de Adesivo...</span></button>
-                    <button type="button" class="dropdown-item" onclick="openDropShadowDialog()"><i class="fas fa-cloud-moon text-indigo-600"></i> <span data-i18n="menu_shadow">Sombra Projetada (Drop Shadow)...</span></button>
+                    <button type="button" class="dropdown-item" onclick="openContourDialog()"><i class="fas fa-bullseye text-pink-600"></i> <span class="menu-label" data-i18n="menu_contour">Contorno (Borda de Corte)...</span></button>
+                    <button type="button" class="dropdown-item" onclick="openDropShadowDialog()"><i class="fas fa-cloud-moon text-indigo-600"></i> <span class="menu-label" data-i18n="menu_shadow">Sombra Projetada (Drop Shadow)...</span></button>
                 </div>
             </div>
 
@@ -177,8 +177,8 @@ $baseDir = './';
             <div class="menu-item">
                 <button type="button" class="menu-btn" data-i18n="menu_bitmap">Bitmap</button>
                 <div class="dropdown-menu">
-                    <button type="button" class="dropdown-item" onclick="openPowerTraceDialog()"><i class="fas fa-bolt text-amber-500"></i> <span data-i18n="menu_trace">Rastreamento PowerTRACE™...</span></button>
-                    <button type="button" class="dropdown-item" onclick="toggleImportedBgImage()"><i class="fas fa-eye-slash"></i> <span data-i18n="menu_toggle_bg">Ocultar Fundo / Template</span></button>
+                    <button type="button" class="dropdown-item" onclick="openPowerTraceDialog()"><i class="fas fa-bolt text-amber-500"></i> <span class="menu-label" data-i18n="menu_trace">Rastreamento PowerTRACE™...</span></button>
+                    <button type="button" class="dropdown-item" onclick="toggleImportedBgImage()"><i class="fas fa-eye-slash"></i> <span class="menu-label" data-i18n="menu_toggle_bg">Ocultar Imagem de Fundo</span></button>
                 </div>
             </div>
 
@@ -186,12 +186,12 @@ $baseDir = './';
             <div class="menu-item">
                 <button type="button" class="menu-btn" data-i18n="menu_help">Ajuda</button>
                 <div class="dropdown-menu">
-                    <a href="tutorial.php" target="_blank" class="dropdown-item"><i class="fas fa-book-open text-emerald-600"></i> <span data-i18n="menu_tutorial">Tutorial & Guia Completo...</span></a>
-                    <button type="button" class="dropdown-item" onclick="showShortcutsModal()"><i class="fas fa-keyboard text-sky-600"></i> <span data-i18n="menu_shortcuts">Atalhos de Teclado</span></button>
-                    <a href="suporte.php" target="_blank" class="dropdown-item"><i class="fas fa-question-circle text-purple-600"></i> <span data-i18n="menu_support">Suporte CorelClone & FAQ</span></a>
+                    <a href="tutorial.php" target="_blank" class="dropdown-item"><i class="fas fa-book-open text-emerald-600"></i> <span class="menu-label" data-i18n="menu_tutorial">Tutorial & Guia Completo...</span></a>
+                    <button type="button" class="dropdown-item" onclick="showShortcutsModal()"><i class="fas fa-keyboard text-sky-600"></i> <span class="menu-label" data-i18n="menu_shortcuts">Atalhos de Teclado</span></button>
+                    <a href="suporte.php" target="_blank" class="dropdown-item"><i class="fas fa-question-circle text-purple-600"></i> <span class="menu-label" data-i18n="menu_support">Suporte CorelClone & FAQ</span></a>
                     <div class="dropdown-separator"></div>
-                    <a href="termos.php" target="_blank" class="dropdown-item"><i class="fas fa-file-contract"></i> <span data-i18n="menu_terms">Termos de Serviço</span></a>
-                    <a href="privacidade.php" target="_blank" class="dropdown-item"><i class="fas fa-user-shield"></i> <span data-i18n="menu_privacy">Política de Privacidade</span></a>
+                    <a href="termos.php" target="_blank" class="dropdown-item"><i class="fas fa-file-contract"></i> <span class="menu-label" data-i18n="menu_terms">Termos de Serviço</span></a>
+                    <a href="privacidade.php" target="_blank" class="dropdown-item"><i class="fas fa-user-shield"></i> <span class="menu-label" data-i18n="menu_privacy">Política de Privacidade</span></a>
                 </div>
             </div>
         </nav>
