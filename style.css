@@ -1300,3 +1300,33 @@ body, html {
     scrollbar-color: #d4d4d4 transparent;
 }
 
+/* Botão de Doação e Apoio PayPal - Barra de Título */
+.btn-donate-corel {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-donate-corel:hover {
+    background: linear-gradient(135deg, #fbbf24 0%, #b45309 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+    transform: translateY(-1px);
+}
+
+.btn-donate-corel i {
+    color: #ffffff !important;
+}
+
