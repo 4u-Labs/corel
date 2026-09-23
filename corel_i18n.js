@@ -96,6 +96,9 @@ const COREL_I18N = {
         menu_terms: 'Termos de Serviço',
         menu_privacy: 'Política de Privacidade',
         menu_about: 'Sobre o CorelClone Pro',
+        menu_donate: 'Apoie o CorelClone (PayPal)...',
+        btn_donate: 'Apoie',
+        btn_donate_title: 'Apoie o CorelClone via PayPal (Doação Voluntária)',
 
         // Action Toolbar (Level 3)
         act_new_doc: 'Novo Documento (Ctrl+N)',
@@ -450,6 +453,9 @@ const COREL_I18N = {
         menu_terms: 'Terms of Service',
         menu_privacy: 'Privacy Policy',
         menu_about: 'About CorelClone Pro',
+        menu_donate: 'Support CorelClone (PayPal)...',
+        btn_donate: 'Support',
+        btn_donate_title: 'Support CorelClone via PayPal (Voluntary Donation)',
 
         // Action Toolbar (Level 3)
         act_new_doc: 'New Document (Ctrl+N)',

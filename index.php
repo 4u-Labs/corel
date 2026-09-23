@@ -60,6 +60,9 @@ $baseDir = './';
                 <span class="window-title-text" id="windowTitleText">CorelClone Pro 2026 (64-Bit) — [Documento 1] @ 100%</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
+                <a href="https://www.paypal.com/ncp/payment/L7YRCS984T33N" target="_blank" rel="noopener noreferrer" class="btn-donate-corel" style="display:inline-flex; align-items:center; gap:5px; background:linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(217, 119, 6, 0.38)); border:1px solid rgba(245, 158, 11, 0.65); color:#fbbf24; border-radius:4px; padding:3px 10px; font-size:11px; font-weight:700; text-decoration:none; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.3); transition:all 0.2s;" data-i18n-title="btn_donate_title" title="Apoie o CorelClone via PayPal (Doação Voluntária)">
+                    <i class="fas fa-mug-hot"></i> <span data-i18n="btn_donate">Apoie</span>
+                </a>
                 <button type="button" class="btn-download-desktop" onclick="openDownloadDesktopModal()" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, #059669, #047857); color:#fff; border:none; border-radius:4px; padding:3px 10px; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.2);" data-i18n-title="btn_download_app_title" title="Baixar aplicativo para Computador (Windows, Mac ou Linux)">
                     <i class="fas fa-download"></i> <span data-i18n="btn_download_app">Baixar App</span>
                 </button>
@@ -191,6 +194,8 @@ $baseDir = './';
                     <a href="tutorial.php" target="_blank" class="dropdown-item"><i class="fas fa-book-open text-emerald-600"></i> <span class="menu-label" data-i18n="menu_tutorial">Tutorial & Guia Completo...</span></a>
                     <button type="button" class="dropdown-item" onclick="showShortcutsModal()"><i class="fas fa-keyboard text-sky-600"></i> <span class="menu-label" data-i18n="menu_shortcuts">Atalhos de Teclado</span></button>
                     <a href="suporte.php" target="_blank" class="dropdown-item"><i class="fas fa-question-circle text-purple-600"></i> <span class="menu-label" data-i18n="menu_support">Suporte CorelClone & FAQ</span></a>
+                    <div class="dropdown-separator"></div>
+                    <a href="https://www.paypal.com/ncp/payment/L7YRCS984T33N" target="_blank" rel="noopener noreferrer" class="dropdown-item"><i class="fas fa-heart text-amber-500"></i> <span class="menu-label" data-i18n="menu_donate">Apoie o CorelClone (PayPal)...</span></a>
                     <div class="dropdown-separator"></div>
                     <a href="termos.php" target="_blank" class="dropdown-item"><i class="fas fa-file-contract"></i> <span class="menu-label" data-i18n="menu_terms">Termos de Serviço</span></a>
                     <a href="privacidade.php" target="_blank" class="dropdown-item"><i class="fas fa-user-shield"></i> <span class="menu-label" data-i18n="menu_privacy">Política de Privacidade</span></a>
