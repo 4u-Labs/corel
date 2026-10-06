@@ -91,7 +91,7 @@ def convert_cdr_via_cdr2xhtml(input_cdr_path):
         thumb = None
         try:
             with zipfile.ZipFile(input_cdr_path) as z:
-                for tname in ['previews/thumbnail.png', 'previews/page1.png']:
+                for tname in ['previews/thumbnail.png', 'previews/page1.png', 'metadata/thumbnails/thumbnail.bmp', 'metadata/thumbnails/page1.bmp', 'metadata/thumbnails/thumbnail.png', 'metadata/thumbnails/page1.png']:
                     if tname in z.namelist():
                         thumb = Image.open(io.BytesIO(z.read(tname))).convert('RGB')
                         break
@@ -363,6 +363,18 @@ def convert_cdr_via_cdr2xhtml(input_cdr_path):
         inner_end = svg_baked.rfind('</svg>')
         inner = svg_baked[inner_start:inner_end].strip()
 
+        # 4c. Recover missing artwork from internal thumbnail if cdr2xhtml dropped PowerClip contents
+        num_extracted_paths = len(re.findall(r'<path\b', svg_clean))
+        num_extracted_images = len(re.findall(r'<image\b', svg_clean))
+        num_extracted_texts = len(re.findall(r'<text\b', svg_clean))
+
+        if num_extracted_images == 0 and num_extracted_texts == 0 and num_extracted_paths <= 2 and thumb is not None:
+            buf = io.BytesIO()
+            thumb.save(buf, format='PNG')
+            b64_png = base64.b64encode(buf.getvalue()).decode('ascii')
+            img_tag = f'<image xlink:href="data:image/png;base64,{b64_png}" x="{pad:.2f}" y="{pad:.2f}" width="{bbox_w:.2f}" height="{bbox_h:.2f}" />\n'
+            inner = img_tag + inner
+
         final_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{final_w:.2f}" height="{final_h:.2f}" viewBox="0 0 {final_w:.2f} {final_h:.2f}">
 {inner}
 </svg>"""
@@ -469,7 +481,7 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                 "service": "CorelClone High-Fidelity Vector Bridge",
                 "converters": ["cdr2xhtml (native libcdr)", "libreoffice/draw", "pdftocairo"],
                 "cdr2xhtml": cdr_bin,
-                "version": "2026.5"
+                "version": "2026.6"
             }
             self.wfile.write(json.dumps(resp).encode('utf-8'))
             return
