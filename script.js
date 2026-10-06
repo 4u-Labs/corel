@@ -1589,9 +1589,10 @@ function updateLayersTree() {
         const isSelected = state.selectedElements.includes(el);
         const tag = el.tagName.toLowerCase();
         const elId = el.getAttribute('id') || '';
-        // Nome amigável
         let name;
-        if (elId && !elId.match(/^(rect|ellipse|path|polygon|text|image|circle|line|polyline|group|g)\d*$/i)) {
+        if (elId === 'corel_preview_fundo') {
+            name = '🎨 Fundo Colorido Original (Corel)';
+        } else if (elId && !elId.match(/^(rect|ellipse|path|polygon|text|image|circle|line|polyline|group|g)\d*$/i)) {
             name = elId; // ID customizado pelo usuário
         } else if (tag === 'image') {
             name = `Imagem Bitmap ${items.length - index}`;
@@ -1923,12 +1924,27 @@ async function handleImportFile(file) {
             const timeoutMs = Math.max(60000, Math.min(180000, Math.round(file.size / 1024) + 60000));
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-            const bridgeUrl = isLocalHost ? '/convert' : 'http://127.0.0.1:54321/convert';
-            const res = await fetch(bridgeUrl, {
-                method: 'POST',
-                body: formData,
-                signal: controller.signal
-            });
+            // Motor Vetorial Nativo na Nuvem 4U (VPS Oracle) com fallback local
+            let bridgeUrl = '/app/corel/convert';
+            let res;
+            try {
+                res = await fetch(bridgeUrl, {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                });
+            } catch (netErr) {
+                // Fallback para localhost caso usuário esteja 100% offline
+                try {
+                    res = await fetch('http://127.0.0.1:54321/convert', {
+                        method: 'POST',
+                        body: formData,
+                        signal: controller.signal
+                    });
+                } catch (localErr) {
+                    throw netErr;
+                }
+            }
             clearTimeout(timeoutId);
 
             if (res.ok) {
@@ -1963,6 +1979,7 @@ async function handleImportFile(file) {
             renderDocumentTabs();
             switchDocumentTab(0);
             importSVGStringToActiveCanvas(convertedPages[0].svg, true);
+            setTimeout(() => zoomFitPage(), 50);
             toast(`⚡ Arquivo .${ext.toUpperCase()} com ${convertedPages.length} páginas carregado com 100% de precisão vetorial nativa!`, 'ok');
             return;
         }
@@ -1972,6 +1989,7 @@ async function handleImportFile(file) {
             renderDocumentTabs();
             switchDocumentTab(0);
             importSVGStringToActiveCanvas(convertedSvg, true);
+            setTimeout(() => zoomFitPage(), 50);
             toast(`⚡ Arquivo .${ext.toUpperCase()} aberto com 100% de precisão vetorial nativa!`, 'ok');
             return;
         }
@@ -2039,8 +2057,8 @@ function importSVGStringToActiveCanvas(svgText, isFullPage = false) {
             return parseFloat(val) || defaultVal;
         };
 
-        const targetW = parseDim(svgEl.getAttribute('width'), vbW || 600);
-        const targetH = parseDim(svgEl.getAttribute('height'), vbH || 600);
+        const targetW = vbW || parseDim(svgEl.getAttribute('width'), 800);
+        const targetH = vbH || parseDim(svgEl.getAttribute('height'), 600);
 
         if (isFullPage && targetW > 50 && targetH > 50) {
             state.docWidth = Math.round(targetW);
@@ -2063,7 +2081,7 @@ function importSVGStringToActiveCanvas(svgText, isFullPage = false) {
         );
 
         let elementsToAppend = [];
-        if (validChildren.length === 1 && validChildren[0].tagName.toLowerCase() === 'g') {
+        if (validChildren.length === 1 && validChildren[0].tagName.toLowerCase() === 'g' && !validChildren[0].getAttribute('transform')) {
             elementsToAppend = Array.from(validChildren[0].children);
         } else {
             elementsToAppend = validChildren;
@@ -2073,16 +2091,13 @@ function importSVGStringToActiveCanvas(svgText, isFullPage = false) {
             elementsToAppend.forEach(child => {
                 layerGroup.appendChild(child.cloneNode(true));
             });
-            const allAdded = Array.from(layerGroup.children);
-            if (allAdded.length > 0) {
-                selectElement(allAdded[0], false);
-            }
+            deselectAll();
         } else {
             const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             g.setAttribute('class', 'imported-group');
             validChildren.forEach(c => g.appendChild(c.cloneNode(true)));
             layerGroup.appendChild(g);
-            selectElement(g, false);
+            deselectAll();
         }
 
         saveState('Importar Vetor');

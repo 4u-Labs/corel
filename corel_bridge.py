@@ -2,14 +2,17 @@
 """
 CorelClone Pro 2026 — High-Fidelity Vector Conversion Bridge & Local Server
 Converts .CDR and .PDF files to native, crystal-clear SVG using:
-- pdftocairo (for .PDF, instant poppler vector conversion)
-- LibreOffice/libcdr (for .CDR, with automatic pasteboard debris cleaning)
-Also serves CorelClone Pro directly on http://127.0.0.1:54321 for 100% offline usage.
+- cdr2xhtml / libcdr-tools (Primary: extracts original 100% full-resolution bitmaps + Bézier curves)
+- LibreOffice Draw SVG (Fallback 1)
+- LibreOffice -> PDF -> pdftocairo (Fallback 2, multi-page)
+- ZIP thumbnail (Fallback 3, last resort)
+Serves CorelClone Pro directly on http://127.0.0.1:54321 for offline/local usage.
 """
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import tempfile, subprocess, os, sys, shutil, re, json
+import tempfile, subprocess, os, sys, shutil, re, json, io, base64
 import xml.etree.ElementTree as ET
+from PIL import Image
 
 PORT = 54321
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -33,72 +36,170 @@ MIME_TYPES = {
     '.pdf': 'application/pdf'
 }
 
+def find_cdr2xhtml():
+    candidates = [
+        shutil.which('cdr2xhtml'),
+        os.path.expanduser('~/.local/bin/cdr2xhtml'),
+        '/usr/bin/cdr2xhtml',
+        '/home/fabiano/.local/bin/cdr2xhtml',
+        '/home/fabiano/.local/usr/bin/cdr2xhtml'
+    ]
+    for cand in candidates:
+        if cand and os.path.isfile(cand) and os.access(cand, os.X_OK):
+            return cand
+    return None
+
+def convert_cdr_via_cdr2xhtml(input_cdr_path):
+    """
+    Executes cdr2xhtml from libcdr-tools:
+    - Extracts all original high-resolution bitmaps stored in content/data/Bitmaps.dat
+    - Extracts all native vector paths, curves, and text
+    - Converts uncompressed BMP data URIs to fast, lossless PNG data URIs
+    - Automatically normalizes coordinates and adjusts canvas viewBox to fit the entire artwork
+    """
+    bin_path = find_cdr2xhtml()
+    if not bin_path:
+        return None
+
+    try:
+        proc = subprocess.run([bin_path, input_cdr_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=90)
+        if proc.returncode != 0 or not proc.stdout or (b'<svg:svg' not in proc.stdout and b'<svg' not in proc.stdout):
+            sys.stderr.write(f"[CorelBridge] cdr2xhtml error code {proc.returncode}: {proc.stderr.decode(errors='ignore')[:300]}\n")
+            return None
+
+        raw_text = proc.stdout.decode('utf-8', errors='ignore')
+        start = raw_text.find('<svg:svg') if '<svg:svg' in raw_text else raw_text.find('<svg')
+        end = raw_text.rfind('</svg:svg>') + len('</svg:svg>') if '</svg:svg>' in raw_text else raw_text.rfind('</svg>') + len('</svg>')
+        if start == -1 or end <= start:
+            return None
+
+        svg_raw = raw_text[start:end]
+
+        # 1. Clean namespace tags
+        svg_clean = re.sub(r'<(/?)svg:([a-zA-Z0-9_-]+)', r'<\1\2', svg_raw)
+        svg_clean = re.sub(r'xmlns:svg="[^"]*"', '', svg_clean)
+        svg_clean = re.sub(r'<\?xml[^\?]*\?>', '', svg_clean)
+        svg_clean = re.sub(r'<!DOCTYPE[^>]*>', '', svg_clean)
+        svg_clean = re.sub(r'<\?import[^>]*\?>', '', svg_clean)
+
+        # 2. Fast convert uncompressed BMP data URIs to lossless PNG
+        def bmp_to_png(m):
+            b64_bmp = m.group(1)
+            raw = base64.b64decode(b64_bmp)
+            img = Image.open(io.BytesIO(raw))
+            buf = io.BytesIO()
+            img.save(buf, format='PNG', compress_level=1)
+            b64_png = base64.b64encode(buf.getvalue()).decode('ascii')
+            return f'xlink:href="data:image/png;base64,{b64_png}"'
+
+        svg_clean = re.sub(r'xlink:href="data:image/bmp;base64,([^"]+)"', bmp_to_png, svg_clean)
+
+        # 3. Calculate bounding box of all visual artwork elements
+        all_x = []
+        all_y = []
+
+        for d in re.findall(r'<path\b[^>]*\bd="([^"]+)"', svg_clean):
+            nums = [float(n) for n in re.findall(r'[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?', d)]
+            if nums and len(nums) >= 2:
+                all_x.extend(nums[0::2])
+                all_y.extend(nums[1::2])
+
+        for img in re.findall(r'<image\b([^>]*)>', svg_clean):
+            xm = re.search(r'x="([^"]+)"', img)
+            ym = re.search(r'y="([^"]+)"', img)
+            wm = re.search(r'width="([^"]+)"', img)
+            hm = re.search(r'height="([^"]+)"', img)
+            if xm and ym and wm and hm:
+                x, y, w, h = float(xm.group(1)), float(ym.group(1)), float(wm.group(1)), float(hm.group(1))
+                all_x.extend([x, x + w])
+                all_y.extend([y, y + h])
+
+        for el in re.findall(r'<(?:rect|text)\b([^>]*)>', svg_clean):
+            xm = re.search(r'x="([^"]+)"', el)
+            ym = re.search(r'y="([^"]+)"', el)
+            if xm and ym:
+                all_x.append(float(xm.group(1)))
+                all_y.append(float(ym.group(1)))
+
+        if all_x and all_y:
+            min_x = min(all_x)
+            min_y = min(all_y)
+            max_x = max(all_x)
+            max_y = max(all_y)
+            bbox_w = max_x - min_x
+            bbox_h = max_y - min_y
+        else:
+            min_x, min_y, bbox_w, bbox_h = 0, 0, 1000, 1000
+
+        pad = 30.0
+        shift_x = -min_x + pad
+        shift_y = -min_y + pad
+        final_w = bbox_w + (pad * 2)
+        final_h = bbox_h + (pad * 2)
+
+        # 4. Bake shift_x and shift_y directly into element coordinates for top-level editing
+        def shift_path_match(m):
+            full_path = m.group(0)
+            d = m.group(1)
+            def repl_coord(cm):
+                x = float(cm.group(1)) + shift_x
+                y = float(cm.group(2)) + shift_y
+                return f"{x:.2f},{y:.2f}"
+            new_d = re.sub(r'([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*,\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)', repl_coord, d)
+            return full_path.replace(f'd="{d}"', f'd="{new_d}"')
+
+        svg_baked = re.sub(r'<path\b[^>]*\bd="([^"]+)"[^>]*>', shift_path_match, svg_clean)
+
+        def shift_xy_elem(m):
+            tag = m.group(0)
+            def shift_attr(val_str, delta):
+                return f"{float(val_str) + delta:.2f}"
+            tag = re.sub(r'\bx="([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)"', lambda xm: f'x="{shift_attr(xm.group(1), shift_x)}"', tag)
+            tag = re.sub(r'\by="([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)"', lambda ym: f'y="{shift_attr(ym.group(1), shift_y)}"', tag)
+            return tag
+
+        svg_baked = re.sub(r'<(?:image|text|tspan|rect)\b[^>]*>', shift_xy_elem, svg_baked)
+
+        inner_start = svg_baked.find('>') + 1
+        inner_end = svg_baked.rfind('</svg>')
+        inner = svg_baked[inner_start:inner_end].strip()
+
+        final_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{final_w:.2f}" height="{final_h:.2f}" viewBox="0 0 {final_w:.2f} {final_h:.2f}">
+{inner}
+</svg>"""
+        return final_svg
+
+    except Exception as e:
+        sys.stderr.write(f"[CorelBridge] Falha em convert_cdr_via_cdr2xhtml: {e}\n")
+        return None
+
 def clean_libreoffice_svg(svg_bytes):
     """
-    Cleans up LibreOffice SVG export:
+    Cleans up LibreOffice Draw direct SVG export:
     - Removes dummy invisible BoundingBox rects
     - Removes empty Master Slide / presentation background groups
-    - Prunes discarded objects placed outside the page margins (pasteboard / mesa de trabalho)
-    - Prunes empty <g> containers recursively
-    - Unwraps single-child transparent wrappers (SlideGroup -> g -> container-id1 -> id1 -> Page)
-      so the visual shapes (images, paths, curves) are direct top-level elements.
+    - Preserves all real content coordinates
+    - Recursively prunes empty <g> containers
     """
     try:
         ET.register_namespace('', 'http://www.w3.org/2000/svg')
         ET.register_namespace('xlink', 'http://www.w3.org/1999/xlink')
         root = ET.fromstring(svg_bytes)
 
-        # Read viewBox
-        vb_attr = root.attrib.get('viewBox', '')
-        vb_parts = [float(p) for p in re.split(r'[\s,]+', vb_attr.strip()) if p]
-        if len(vb_parts) == 4:
-            vb_min_x, vb_min_y, vb_w, vb_h = vb_parts
-        else:
-            vb_min_x, vb_min_y, vb_w, vb_h = 0, 0, 8000, 16000
-
-        # 1. Prune unwanted elements (BoundingBox rects, Master Slide, pasteboard items)
+        # 1. Prune dummy BoundingBox rects & Master Slide
         for parent in list(root.iter()):
             for child in list(parent):
                 tag = child.tag.split('}')[-1]
                 cls = child.attrib.get('class', '')
                 cid = child.attrib.get('id', '')
 
-                # Remove dummy BoundingBox rects
                 if tag == 'rect' and ('BoundingBox' in cls or (child.attrib.get('stroke') == 'none' and child.attrib.get('fill') == 'none')):
                     parent.remove(child)
                     continue
 
-                # Remove Master Slide & presentation background
                 if cls == 'Master_Slide' or cid in ('id2', 'bg-id2', 'bo-id2'):
                     parent.remove(child)
                     continue
-
-                # Check coordinates of elements far outside viewBox
-                x_str = child.attrib.get('x')
-                y_str = child.attrib.get('y')
-                if x_str is not None and y_str is not None:
-                    try:
-                        x = float(x_str)
-                        y = float(y_str)
-                        w = float(child.attrib.get('width', 0))
-                        h = float(child.attrib.get('height', 0))
-                        if (x >= vb_w * 1.02) or (x + w <= vb_min_x - vb_w * 0.02) or (y >= vb_h * 1.02) or (y + h <= vb_min_y - vb_h * 0.02):
-                            parent.remove(child)
-                            continue
-                    except:
-                        pass
-
-                # Check path coordinates
-                if tag == 'path':
-                    d = child.attrib.get('d', '')
-                    if d:
-                        nums = [float(n) for n in re.findall(r'[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?', d)]
-                        if nums and len(nums) >= 2:
-                            xs = nums[0::2]
-                            ys = nums[1::2]
-                            if xs and min(xs) >= vb_w * 1.02:
-                                parent.remove(child)
-                                continue
 
         # 2. Recursively prune empty groups
         changed = True
@@ -110,49 +211,31 @@ def clean_libreoffice_svg(svg_bytes):
                         parent.remove(child)
                         changed = True
 
-        # 3. Unwrap transparent LibreOffice group hierarchies
-        defs_and_styles = [c for c in list(root) if c.tag.split('}')[-1] in ('defs', 'style', 'metadata')]
-        
-        def find_visual_elements(node):
-            res = []
-            for c in list(node):
-                tag = c.tag.split('}')[-1]
-                if tag in ('defs', 'style', 'metadata'):
-                    continue
-                # If group with only 1 child group and no attributes/transforms, unwrap
-                curr = c
-                while curr.tag.split('}')[-1] == 'g' and len(curr) == 1 and list(curr)[0].tag.split('}')[-1] == 'g' and not curr.attrib.get('transform'):
-                    curr = list(curr)[0]
-                if curr.attrib.get('class') == 'Page':
-                    for pch in list(curr):
-                        # also unwrap single-element dummy wrappers like <g class='com.sun.star...'><path ...></g>
-                        if pch.tag.split('}')[-1] == 'g' and len(pch) == 1 and not pch.attrib.get('transform'):
-                            inner = list(pch)[0]
-                            if inner.tag.split('}')[-1] in ('path', 'image', 'text', 'rect', 'ellipse', 'polygon'):
-                                res.append(inner)
-                                continue
-                        res.append(pch)
-                else:
-                    if curr.tag.split('}')[-1] == 'g' and len(curr) == 1 and not curr.attrib.get('transform'):
-                        inner = list(curr)[0]
-                        if inner.tag.split('}')[-1] in ('path', 'image', 'text', 'rect', 'ellipse', 'polygon'):
-                            res.append(inner)
-                            continue
-                    res.append(curr)
-            return res
-
-        visual_nodes = find_visual_elements(root)
-        if visual_nodes:
-            for c in list(root):
-                if c not in defs_and_styles:
-                    root.remove(c)
-            for vn in visual_nodes:
-                root.append(vn)
-
-        return ET.tostring(root, encoding='utf-8')
+        return ET.tostring(root, encoding='utf-8').decode('utf-8', errors='ignore')
     except Exception as e:
-        sys.stderr.write(f"[CorelBridge] Error cleaning SVG: {e}\n")
-        return svg_bytes
+        sys.stderr.write(f"[CorelBridge] Erro ao limpar SVG do LibreOffice: {e}\n")
+        return svg_bytes.decode('utf-8', errors='ignore') if isinstance(svg_bytes, bytes) else svg_bytes
+
+def extract_cdr_thumbnail_fallback(cdr_bytes):
+    """
+    Absolute fallback if all vector engines fail: extracts embedded PNG/BMP preview thumbnail.
+    """
+    try:
+        import zipfile
+        with zipfile.ZipFile(io.BytesIO(cdr_bytes)) as z:
+            for name in ['previews/page1.png', 'previews/thumbnail.png', 'metadata/thumbnails/page1.bmp', 'metadata/thumbnails/thumbnail.bmp']:
+                if name in z.namelist():
+                    raw = z.read(name)
+                    mime = 'image/bmp' if name.endswith('.bmp') else 'image/png'
+                    b64 = base64.b64encode(raw).decode('ascii')
+                    im = Image.open(io.BytesIO(raw))
+                    w, h = im.size
+                    return f"""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{w}" height="{h}" viewBox="0 0 {w} {h}">
+<image xlink:href="data:{mime};base64,{b64}" width="{w}" height="{h}" />
+</svg>"""
+    except Exception as ze:
+        sys.stderr.write(f"[CorelBridge] Erro ao extrair thumbnail: {ze}\n")
+    return None
 
 class CDRBridgeHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -177,16 +260,23 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
         clean_path = self.path.split('?')[0].strip()
 
         # Status check
-        # Status check
-        if clean_path == '/status':
+        if clean_path in ('/status', '/app/corel/status'):
+            cdr_bin = find_cdr2xhtml()
             self.send_response(200)
             self.send_cors_headers()
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            self.wfile.write(b'{"status":"ready","service":"CorelClone High-Fidelity Vector Bridge","converters":["pdftocairo","libreoffice/libcdr"],"version":"2026"}')
+            resp = {
+                "status": "ready",
+                "service": "CorelClone High-Fidelity Vector Bridge",
+                "converters": ["cdr2xhtml (native libcdr)", "libreoffice/draw", "pdftocairo"],
+                "cdr2xhtml": cdr_bin,
+                "version": "2026.2"
+            }
+            self.wfile.write(json.dumps(resp).encode('utf-8'))
             return
 
-        # Route for Corel (Primary)
+        # Route for Corel web app
         if clean_path in ('/corel', '/corel/', '/corel/index.php', '/corel/index.html'):
             php_file = os.path.join(BASE_DIR, 'index.php')
             if os.path.isfile(php_file):
@@ -229,13 +319,6 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                     self.send_error(500, f"Erro ao ler arquivo: {e}")
                     return
 
-        # Redirect legacy /corel2/ to /corel/
-        if clean_path.startswith('/corel2'):
-            self.send_response(301)
-            self.send_header('Location', '/corel/')
-            self.end_headers()
-            return
-
         # Redirect root / to /corel/
         if clean_path in ('', '/', '/index.html'):
             self.send_response(302)
@@ -244,15 +327,12 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
             return
 
         target_file = os.path.abspath(os.path.join(BASE_DIR, clean_path.lstrip('/')))
-        # Prevent directory traversal
         if target_file.startswith(BASE_DIR) and os.path.isfile(target_file):
             ext = os.path.splitext(target_file)[1].lower()
             mime = MIME_TYPES.get(ext, 'application/octet-stream')
-
             try:
                 with open(target_file, 'rb') as f:
                     content = f.read()
-
                 self.send_response(200)
                 self.send_cors_headers()
                 self.send_header('Content-Type', mime)
@@ -268,8 +348,8 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         clean_path = self.path.split('?')[0].strip()
-        if clean_path != '/convert':
-            self.send_error(404, "Rota desconhecida. Use /convert")
+        if clean_path not in ('/convert', '/app/corel/convert'):
+            self.send_error(404, "Rota desconhecida. Use /convert ou /app/corel/convert")
             return
 
         try:
@@ -290,7 +370,6 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                 parts = body.split(b'--' + boundary)
                 for part in parts:
                     if b'filename=' in part:
-                        # Extract filename
                         fn_match = re.search(rb'filename="([^"]+)"', part)
                         if fn_match:
                             orig_filename = fn_match.group(1).decode(errors='ignore')
@@ -299,46 +378,81 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                         if header_end != -1:
                             file_bytes = part[header_end + 4:].rstrip(b'\r\n-')
                             break
-            
+
             if not file_bytes:
                 file_bytes = body
 
             is_pdf = file_bytes.startswith(b'%PDF') or orig_filename.lower().endswith('.pdf')
 
             with tempfile.TemporaryDirectory() as tmpdir:
-                pdf_path = None
-                if is_pdf:
-                    pdf_path = os.path.join(tmpdir, "input.pdf")
-                    with open(pdf_path, 'wb') as f:
-                        f.write(file_bytes)
-                else:
-                    # Conversion for CDR using LibreOffice (libcdr backend -> PDF for maximum speed and multi-page fidelity)
+                if not is_pdf:
                     input_cdr = os.path.join(tmpdir, "input.cdr")
                     with open(input_cdr, 'wb') as f:
                         f.write(file_bytes)
 
+                    # 1. Primary Engine: cdr2xhtml (Native libcdr — extracts original 50MB+ high-res bitmaps)
+                    highres_svg = convert_cdr_via_cdr2xhtml(input_cdr)
+                    if highres_svg:
+                        resp_json = {
+                            "success": True,
+                            "format": "cdr",
+                            "engine": "cdr2xhtml",
+                            "multiPage": False,
+                            "pageCount": 1,
+                            "pages": [{"id": 0, "name": "Página 1", "svg": highres_svg}]
+                        }
+                        resp_bytes = json.dumps(resp_json).encode('utf-8')
+                        self.send_response(200)
+                        self.send_cors_headers()
+                        self.send_header('Content-Type', 'application/json; charset=utf-8')
+                        self.send_header('Content-Length', str(len(resp_bytes)))
+                        self.end_headers()
+                        self.wfile.write(resp_bytes)
+                        return
+
+                    # 2. Fallback Engine 1: LibreOffice Draw direct SVG
+                    cmd_svg = ['libreoffice', '--headless', '--convert-to', 'svg', input_cdr, '--outdir', tmpdir]
+                    subprocess.run(cmd_svg, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+                    svg_files = [f for f in os.listdir(tmpdir) if f.endswith('.svg')]
+                    if svg_files:
+                        svg_path = os.path.join(tmpdir, svg_files[0])
+                        with open(svg_path, 'rb') as f:
+                            raw_lo_svg = f.read()
+                        cleaned_lo_svg = clean_libreoffice_svg(raw_lo_svg)
+                        resp_json = {
+                            "success": True,
+                            "format": "cdr",
+                            "engine": "libreoffice_draw",
+                            "multiPage": False,
+                            "pageCount": 1,
+                            "pages": [{"id": 0, "name": "Página 1", "svg": cleaned_lo_svg}]
+                        }
+                        resp_bytes = json.dumps(resp_json).encode('utf-8')
+                        self.send_response(200)
+                        self.send_cors_headers()
+                        self.send_header('Content-Type', 'application/json; charset=utf-8')
+                        self.send_header('Content-Length', str(len(resp_bytes)))
+                        self.end_headers()
+                        self.wfile.write(resp_bytes)
+                        return
+
+                    # 3. Fallback Engine 2: LibreOffice -> PDF
                     cmd = ['libreoffice', '--headless', '--convert-to', 'pdf', input_cdr, '--outdir', tmpdir]
                     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
-
                     pdf_candidates = [f for f in os.listdir(tmpdir) if f.endswith('.pdf')]
                     if pdf_candidates:
                         pdf_path = os.path.join(tmpdir, pdf_candidates[0])
                     else:
-                        # Fallback to direct SVG conversion if PDF conversion produced no file
-                        cmd_svg = ['libreoffice', '--headless', '--convert-to', 'svg', input_cdr, '--outdir', tmpdir]
-                        subprocess.run(cmd_svg, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=40)
-                        svg_files = [f for f in os.listdir(tmpdir) if f.endswith('.svg')]
-                        if svg_files:
-                            svg_path = os.path.join(tmpdir, svg_files[0])
-                            with open(svg_path, 'rb') as f:
-                                raw_svg = f.read()
-                            svg_content = clean_libreoffice_svg(raw_svg).decode('utf-8', errors='ignore')
+                        # Fallback 3: Embedded thumbnail
+                        thumb_svg = extract_cdr_thumbnail_fallback(file_bytes)
+                        if thumb_svg:
                             resp_json = {
                                 "success": True,
                                 "format": "cdr",
+                                "engine": "zip_thumbnail",
                                 "multiPage": False,
                                 "pageCount": 1,
-                                "pages": [{"id": 0, "name": "Página 1", "svg": svg_content}]
+                                "pages": [{"id": 0, "name": "Página 1", "svg": thumb_svg}]
                             }
                             resp_bytes = json.dumps(resp_json).encode('utf-8')
                             self.send_response(200)
@@ -348,16 +462,20 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                             self.end_headers()
                             self.wfile.write(resp_bytes)
                             return
-                        else:
-                            err_msg = proc.stderr.decode(errors='ignore') or proc.stdout.decode(errors='ignore') or "Falha na conversao do arquivo CorelDRAW (.CDR)"
-                            self.send_response(500)
-                            self.send_cors_headers()
-                            self.send_header('Content-Type', 'application/json')
-                            self.end_headers()
-                            self.wfile.write(f'{{"error": "{err_msg}"}}'.encode())
-                            return
 
-                # Multi-page vector extraction via pdftocairo
+                        err_msg = proc.stderr.decode(errors='ignore') or proc.stdout.decode(errors='ignore') or "Falha na conversão do arquivo CorelDRAW (.CDR)"
+                        self.send_response(500)
+                        self.send_cors_headers()
+                        self.send_header('Content-Type', 'application/json')
+                        self.end_headers()
+                        self.wfile.write(f'{{"error": "{err_msg}"}}'.encode())
+                        return
+                else:
+                    pdf_path = os.path.join(tmpdir, "input.pdf")
+                    with open(pdf_path, 'wb') as f:
+                        f.write(file_bytes)
+
+                # Multi-page vector extraction via pdftocairo (for PDF or multi-page documents)
                 pages_count = 1
                 try:
                     info_res = subprocess.run(['pdfinfo', pdf_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
@@ -366,7 +484,7 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                             pages_count = int(line.split(':')[1].strip())
                             break
                 except Exception as pe:
-                    print(f"[CorelBridge] Aviso pdfinfo: {pe}")
+                    sys.stderr.write(f"[CorelBridge] Aviso pdfinfo: {pe}\n")
 
                 pages_list = []
                 for i in range(1, pages_count + 1):
@@ -392,6 +510,7 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                 resp_data = {
                     "success": True,
                     "format": "pdf" if is_pdf else "cdr",
+                    "engine": "pdftocairo",
                     "multiPage": len(pages_list) > 1,
                     "pageCount": len(pages_list),
                     "pages": pages_list
@@ -406,6 +525,7 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                 self.wfile.write(resp_bytes)
 
         except Exception as e:
+            sys.stderr.write(f"[CorelBridge] Erro na rota POST: {e}\n")
             self.send_response(500)
             self.send_cors_headers()
             self.send_header('Content-Type', 'application/json')
@@ -413,7 +533,7 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
             self.wfile.write(f'{{"error": "{str(e)}"}}'.encode())
 
 def run_server():
-    server = HTTPServer(('127.0.0.1', PORT), CDRBridgeHandler)
+    server = HTTPServer(('0.0.0.0', PORT), CDRBridgeHandler)
     print(f"CorelClone Vector Bridge & Web App running on http://127.0.0.1:{PORT}")
     server.serve_forever()
 
