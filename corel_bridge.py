@@ -372,8 +372,17 @@ def convert_cdr_via_cdr2xhtml(input_cdr_path):
             buf = io.BytesIO()
             thumb.save(buf, format='PNG')
             b64_png = base64.b64encode(buf.getvalue()).decode('ascii')
-            img_tag = f'<image xlink:href="data:image/png;base64,{b64_png}" x="{pad:.2f}" y="{pad:.2f}" width="{bbox_w:.2f}" height="{bbox_h:.2f}" />\n'
-            inner = img_tag + inner
+            d_match = re.search(r'd="([^"]+)"', inner)
+            if d_match:
+                clip_d = d_match.group(1)
+                inner = f"""<defs>
+  <clipPath id="powerclip_container">
+    <path d="{clip_d}" />
+  </clipPath>
+</defs>
+<image xlink:href="data:image/png;base64,{b64_png}" x="{pad:.2f}" y="{pad:.2f}" width="{bbox_w:.2f}" height="{bbox_h:.2f}" clip-path="url(#powerclip_container)" />"""
+            else:
+                inner = f'<image xlink:href="data:image/png;base64,{b64_png}" x="{pad:.2f}" y="{pad:.2f}" width="{bbox_w:.2f}" height="{bbox_h:.2f}" />'
 
         final_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{final_w:.2f}" height="{final_h:.2f}" viewBox="0 0 {final_w:.2f} {final_h:.2f}">
 {inner}
@@ -481,7 +490,7 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                 "service": "CorelClone High-Fidelity Vector Bridge",
                 "converters": ["cdr2xhtml (native libcdr)", "libreoffice/draw", "pdftocairo"],
                 "cdr2xhtml": cdr_bin,
-                "version": "2026.6"
+                "version": "2026.7"
             }
             self.wfile.write(json.dumps(resp).encode('utf-8'))
             return
