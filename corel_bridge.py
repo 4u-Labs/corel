@@ -12,7 +12,7 @@ Serves CorelClone Pro directly on http://127.0.0.1:54321 for offline/local usage
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import tempfile, subprocess, os, sys, shutil, re, json, io, base64, zipfile
 import xml.etree.ElementTree as ET
-from PIL import Image
+from PIL import Image, ImageDraw
 import numpy as np
 try:
     import scipy.ndimage as ndi
@@ -162,15 +162,68 @@ def convert_cdr_via_cdr2xhtml(input_cdr_path):
         else:
             min_x, min_y, bbox_w, bbox_h = 0, 0, 1000, 1000
 
-        def sample_thumb_color(cx, cy):
-            if not thumb or bbox_w <= 0 or bbox_h <= 0:
+        thumb_arr = np.array(thumb) if thumb else None
+
+        def sample_path_color(d):
+            if thumb is None or bbox_w <= 0 or bbox_h <= 0 or thumb_arr is None:
                 return None
             tw, th = thumb.size
-            tx = max(0, min(tw - 1, int((cx - min_x) / bbox_w * tw)))
-            ty = max(0, min(th - 1, int((cy - min_y) / bbox_h * th)))
-            return thumb.getpixel((tx, ty))
+            sub_d = re.split(r'(?=[M])', d.strip())
+            all_polys = []
+            for s in sub_d:
+                if not s.strip():
+                    continue
+                tokens = re.findall(r'([MLCZ])|([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)', s)
+                pts = []
+                cx, cy = 0.0, 0.0
+                i = 0
+                cmd = ''
+                while i < len(tokens):
+                    t = tokens[i]
+                    if t[0]:
+                        cmd = t[0]
+                        i += 1
+                        continue
+                    if cmd in ('M', 'L'):
+                        x, y = float(tokens[i][1]), float(tokens[i+1][1])
+                        i += 2
+                        cx, cy = x, y
+                        tx = max(0, min(tw - 1, int((x - min_x) / bbox_w * tw)))
+                        ty = max(0, min(th - 1, int((y - min_y) / bbox_h * th)))
+                        pts.append((tx, ty))
+                    elif cmd == 'C':
+                        x1, y1 = float(tokens[i][1]), float(tokens[i+1][1])
+                        x2, y2 = float(tokens[i+2][1]), float(tokens[i+3][1])
+                        x3, y3 = float(tokens[i+4][1]), float(tokens[i+5][1])
+                        i += 6
+                        for t_step in (0.33, 0.66, 1.0):
+                            bx = (1-t_step)**3 * cx + 3*(1-t_step)**2*t_step * x1 + 3*(1-t_step)*t_step**2 * x2 + t_step**3 * x3
+                            by = (1-t_step)**3 * cy + 3*(1-t_step)**2*t_step * y1 + 3*(1-t_step)*t_step**2 * y2 + t_step**3 * y3
+                            tx = max(0, min(tw - 1, int((bx - min_x) / bbox_w * tw)))
+                            ty = max(0, min(th - 1, int((by - min_y) / bbox_h * th)))
+                            pts.append((tx, ty))
+                        cx, cy = x3, y3
+                    else:
+                        i += 1
+                if len(pts) >= 3:
+                    all_polys.append(pts)
+            if not all_polys:
+                return None
+            try:
+                mask = Image.new('L', (tw, th), 0)
+                draw = ImageDraw.Draw(mask)
+                for p in all_polys:
+                    draw.polygon(p, fill=255)
+                m_arr = np.array(mask) > 0
+                if not np.any(m_arr):
+                    return None
+                pixels = thumb_arr[m_arr]
+                r, g, b = np.median(pixels, axis=0)
+                return int(r), int(g), int(b)
+            except Exception:
+                return None
 
-        # 4. Fix uncolored / orphan paths (Clock, Banner, Arrows, Icons)
+        # 4. Fix uncolored / orphan paths (Clock, Banner, Arrows, Icons, Letters)
         def fix_path_style(m):
             p_tag = m.group(0)
             d = m.group(1)
@@ -207,13 +260,12 @@ def convert_cdr_via_cdr2xhtml(input_cdr_path):
             if -2300 <= cx <= -1400 and 700 <= cy <= 1000:
                 return re.sub(r'style="[^"]*"', 'style="fill: #3a3a3a; stroke: #3a3a3a; stroke-width: 1px;"', p_tag)
 
-            # Sample color from thumbnail
-            col = sample_thumb_color(cx, cy)
+            # Sample color from thumbnail via polygon raster mask
+            col = sample_path_color(d)
             if col:
                 r, g, b = col
-                if not (r > 240 and g > 240 and b > 240):
-                    hex_col = f'#{r:02x}{g:02x}{b:02x}'
-                    return re.sub(r'style="[^"]*"', f'style="fill: {hex_col}; stroke: none;"', p_tag)
+                hex_col = f'#{r:02x}{g:02x}{b:02x}'
+                return re.sub(r'style="[^"]*"', f'style="fill: {hex_col}; stroke: none;"', p_tag)
 
             # Default hairline outline
             return re.sub(r'style="[^"]*"', 'style="fill: none; stroke: #222222; stroke-width: 0.5px;"', p_tag)
@@ -417,7 +469,7 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                 "service": "CorelClone High-Fidelity Vector Bridge",
                 "converters": ["cdr2xhtml (native libcdr)", "libreoffice/draw", "pdftocairo"],
                 "cdr2xhtml": cdr_bin,
-                "version": "2026.4"
+                "version": "2026.5"
             }
             self.wfile.write(json.dumps(resp).encode('utf-8'))
             return
