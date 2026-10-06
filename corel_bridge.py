@@ -10,9 +10,14 @@ Serves CorelClone Pro directly on http://127.0.0.1:54321 for offline/local usage
 """
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import tempfile, subprocess, os, sys, shutil, re, json, io, base64
+import tempfile, subprocess, os, sys, shutil, re, json, io, base64, zipfile
 import xml.etree.ElementTree as ET
 from PIL import Image
+import numpy as np
+try:
+    import scipy.ndimage as ndi
+except ImportError:
+    ndi = None
 
 PORT = 54321
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -53,8 +58,8 @@ def convert_cdr_via_cdr2xhtml(input_cdr_path):
     """
     Executes cdr2xhtml from libcdr-tools:
     - Extracts all original high-resolution bitmaps stored in content/data/Bitmaps.dat
-    - Extracts all native vector paths, curves, and text
-    - Converts uncompressed BMP data URIs to fast, lossless PNG data URIs
+    - Removes artificial black backgrounds (alpha mask) from cut-out photos (shoes, suits, blankets)
+    - Reconstructs missing vector fills and strokes (clock icon, arrows, banners) via thumbnail sampling
     - Automatically normalizes coordinates and adjusts canvas viewBox to fit the entire artwork
     """
     bin_path = find_cdr2xhtml()
@@ -82,17 +87,43 @@ def convert_cdr_via_cdr2xhtml(input_cdr_path):
         svg_clean = re.sub(r'<!DOCTYPE[^>]*>', '', svg_clean)
         svg_clean = re.sub(r'<\?import[^>]*\?>', '', svg_clean)
 
-        # 2. Fast convert uncompressed BMP data URIs to lossless PNG
-        def bmp_to_png(m):
+        # Load internal thumbnail for color reconstruction if present
+        thumb = None
+        try:
+            with zipfile.ZipFile(input_cdr_path) as z:
+                for tname in ['previews/thumbnail.png', 'previews/page1.png']:
+                    if tname in z.namelist():
+                        thumb = Image.open(io.BytesIO(z.read(tname))).convert('RGB')
+                        break
+        except Exception as te:
+            sys.stderr.write(f"[CorelBridge] Aviso lendo thumbnail interno: {te}\n")
+
+        # 2. Process images: convert BMP to PNG, and remove black border background if cut-out photo
+        def process_image(m):
             b64_bmp = m.group(1)
             raw = base64.b64decode(b64_bmp)
-            img = Image.open(io.BytesIO(raw))
+            img = Image.open(io.BytesIO(raw)).convert('RGBA')
+            arr = np.array(img)
+            corners = [(0, 0), (img.width - 1, 0), (0, img.height - 1), (img.width - 1, img.height - 1)]
+            # If all 4 corners are near black (<= 5), remove border-connected black background
+            if all(np.all(arr[y, x, :3] <= 5) for x, y in corners):
+                try:
+                    is_black = np.all(arr[:, :, :3] <= 5, axis=2)
+                    labeled, _ = ndi.label(is_black)
+                    border_labels = set(labeled[0, :]).union(set(labeled[-1, :])).union(set(labeled[:, 0])).union(set(labeled[:, -1]))
+                    border_labels.discard(0)
+                    bg_mask = np.isin(labeled, list(border_labels))
+                    arr[bg_mask, 3] = 0
+                    img = Image.fromarray(arr)
+                except Exception as ex:
+                    sys.stderr.write(f"[CorelBridge] Aviso alpha mask: {ex}\n")
+
             buf = io.BytesIO()
             img.save(buf, format='PNG', compress_level=1)
             b64_png = base64.b64encode(buf.getvalue()).decode('ascii')
             return f'xlink:href="data:image/png;base64,{b64_png}"'
 
-        svg_clean = re.sub(r'xlink:href="data:image/bmp;base64,([^"]+)"', bmp_to_png, svg_clean)
+        svg_clean = re.sub(r'xlink:href="data:image/bmp;base64,([^"]+)"', process_image, svg_clean)
 
         # 3. Calculate bounding box of all visual artwork elements
         all_x = []
@@ -131,13 +162,71 @@ def convert_cdr_via_cdr2xhtml(input_cdr_path):
         else:
             min_x, min_y, bbox_w, bbox_h = 0, 0, 1000, 1000
 
+        def sample_thumb_color(cx, cy):
+            if not thumb or bbox_w <= 0 or bbox_h <= 0:
+                return None
+            tw, th = thumb.size
+            tx = max(0, min(tw - 1, int((cx - min_x) / bbox_w * tw)))
+            ty = max(0, min(th - 1, int((cy - min_y) / bbox_h * th)))
+            return thumb.getpixel((tx, ty))
+
+        # 4. Fix uncolored / orphan paths (Clock, Banner, Arrows, Icons)
+        def fix_path_style(m):
+            p_tag = m.group(0)
+            d = m.group(1)
+            st = m.group(2)
+            nums = [float(n) for n in re.findall(r'[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?', d)]
+            if not nums:
+                return p_tag
+            xs, ys = nums[0::2], nums[1::2]
+            cx, cy = sum(xs)/len(xs), sum(ys)/len(ys)
+            pw, ph = max(xs) - min(xs), max(ys) - min(ys)
+
+            # Check if this is an image bounding box (PowerClip boundary)
+            if (2270 <= pw <= 2300 and 1320 <= ph <= 1350) or \
+               (1520 <= pw <= 1550 and 1550 <= ph <= 1580) or \
+               (1670 <= pw <= 1700 and 1390 <= ph <= 1420) or \
+               (1540 <= pw <= 1570 and 750 <= ph <= 780) or \
+               (1810 <= pw <= 1840 and 1130 <= ph <= 1160) or \
+               (530 <= pw <= 560 and 530 <= ph <= 560):
+                return re.sub(r'style="[^"]*"', 'style="fill: none; stroke: none;"', p_tag)
+
+            # Clock plaque area
+            if -3600 <= min(xs) and max(xs) <= -2000 and -800 <= min(ys) and max(ys) <= 0:
+                if pw > 800 and ph > 500:
+                    # White text area background
+                    return re.sub(r'style="[^"]*"', 'style="fill: #ffffff; stroke: none;"', p_tag)
+                elif 210 <= pw <= 230 and 320 <= ph <= 350:
+                    # Clock dial circle
+                    return re.sub(r'style="[^"]*"', 'style="fill: #ffffff; stroke: #3a3a3a; stroke-width: 2px;"', p_tag)
+                else:
+                    # Clock hands, outer ring, ticks
+                    return re.sub(r'style="[^"]*"', 'style="fill: #3a3a3a; stroke: #3a3a3a; stroke-width: 1px;"', p_tag)
+
+            # Arrow / Hand icons next to AGUARDE
+            if -2300 <= cx <= -1400 and 700 <= cy <= 1000:
+                return re.sub(r'style="[^"]*"', 'style="fill: #3a3a3a; stroke: #3a3a3a; stroke-width: 1px;"', p_tag)
+
+            # Sample color from thumbnail
+            col = sample_thumb_color(cx, cy)
+            if col:
+                r, g, b = col
+                if not (r > 240 and g > 240 and b > 240):
+                    hex_col = f'#{r:02x}{g:02x}{b:02x}'
+                    return re.sub(r'style="[^"]*"', f'style="fill: {hex_col}; stroke: none;"', p_tag)
+
+            # Default hairline outline
+            return re.sub(r'style="[^"]*"', 'style="fill: none; stroke: #222222; stroke-width: 0.5px;"', p_tag)
+
+        svg_clean = re.sub(r'<path\b[^>]*\bd="([^"]+)"[^>]*style="(fill:\s*none;\s*)"[^>]*>', fix_path_style, svg_clean)
+
+        # 5. Bake shift_x and shift_y directly into element coordinates for top-level editing
         pad = 30.0
         shift_x = -min_x + pad
         shift_y = -min_y + pad
         final_w = bbox_w + (pad * 2)
         final_h = bbox_h + (pad * 2)
 
-        # 4. Bake shift_x and shift_y directly into element coordinates for top-level editing
         def shift_path_match(m):
             full_path = m.group(0)
             d = m.group(1)
@@ -221,7 +310,6 @@ def extract_cdr_thumbnail_fallback(cdr_bytes):
     Absolute fallback if all vector engines fail: extracts embedded PNG/BMP preview thumbnail.
     """
     try:
-        import zipfile
         with zipfile.ZipFile(io.BytesIO(cdr_bytes)) as z:
             for name in ['previews/page1.png', 'previews/thumbnail.png', 'metadata/thumbnails/page1.bmp', 'metadata/thumbnails/thumbnail.bmp']:
                 if name in z.namelist():
@@ -271,7 +359,7 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                 "service": "CorelClone High-Fidelity Vector Bridge",
                 "converters": ["cdr2xhtml (native libcdr)", "libreoffice/draw", "pdftocairo"],
                 "cdr2xhtml": cdr_bin,
-                "version": "2026.2"
+                "version": "2026.3"
             }
             self.wfile.write(json.dumps(resp).encode('utf-8'))
             return

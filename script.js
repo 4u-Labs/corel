@@ -1966,31 +1966,70 @@ async function handleImportFile(file) {
             console.warn('Bridge local não conectado ou Mixed-Content bloqueado:', bridgeErr);
         }
 
+        const layerGroup = document.getElementById('layerGroupMain');
+        const isCurrentEmpty = (!layerGroup || layerGroup.children.length === 0) && 
+                               (state.pages.length === 1 && !state.pages[0].svgContent && !state.pages[0].svgText);
+
         // Multi-page vector result from bridge
         if (convertedPages && convertedPages.length > 0) {
-            state.pages = convertedPages.map((p, idx) => ({
-                id: idx,
-                name: p.name || `Página ${idx + 1}`,
-                svgContent: null,
-                svgText: p.svg,
-                docWidth: state.docWidth,
-                docHeight: state.docHeight
-            }));
+            if (!isCurrentEmpty && state.activePageIndex >= 0 && state.pages[state.activePageIndex] && layerGroup) {
+                state.pages[state.activePageIndex].svgContent = layerGroup.innerHTML;
+                state.pages[state.activePageIndex].docWidth = state.docWidth;
+                state.pages[state.activePageIndex].docHeight = state.docHeight;
+            }
+
+            if (isCurrentEmpty) {
+                state.pages = [];
+            }
+
+            const startIdx = state.pages.length;
+            convertedPages.forEach((p, idx) => {
+                const tabTitle = convertedPages.length === 1 ? file.name : (p.name || `${file.name} - Pág ${idx + 1}`);
+                state.pages.push({
+                    id: Date.now() + idx,
+                    name: tabTitle,
+                    svgContent: null,
+                    svgText: p.svg,
+                    docWidth: state.docWidth,
+                    docHeight: state.docHeight
+                });
+            });
+
             renderDocumentTabs();
-            switchDocumentTab(0);
+            switchDocumentTab(startIdx);
             importSVGStringToActiveCanvas(convertedPages[0].svg, true);
-            setTimeout(() => zoomFitPage(), 50);
-            toast(`⚡ Arquivo .${ext.toUpperCase()} com ${convertedPages.length} páginas carregado com 100% de precisão vetorial nativa!`, 'ok');
+            setTimeout(() => zoomFitPage(), 80);
+            toast(`⚡ Arquivo "${file.name}" aberto em nova aba com 100% de precisão vetorial nativa!`, 'ok');
             return;
         }
 
         if (convertedSvg) {
-            state.pages = [{ id: 0, name: file.name, svgContent: null, docWidth: state.docWidth, docHeight: state.docHeight }];
-            renderDocumentTabs();
-            switchDocumentTab(0);
-            importSVGStringToActiveCanvas(convertedSvg, true);
-            setTimeout(() => zoomFitPage(), 50);
-            toast(`⚡ Arquivo .${ext.toUpperCase()} aberto com 100% de precisão vetorial nativa!`, 'ok');
+            if (isCurrentEmpty) {
+                state.pages[0].name = file.name;
+                state.pages[0].svgText = convertedSvg;
+                importSVGStringToActiveCanvas(convertedSvg, true);
+                renderDocumentTabs();
+            } else {
+                if (state.activePageIndex >= 0 && state.pages[state.activePageIndex] && layerGroup) {
+                    state.pages[state.activePageIndex].svgContent = layerGroup.innerHTML;
+                    state.pages[state.activePageIndex].docWidth = state.docWidth;
+                    state.pages[state.activePageIndex].docHeight = state.docHeight;
+                }
+                const newIdx = state.pages.length;
+                state.pages.push({
+                    id: Date.now(),
+                    name: file.name,
+                    svgContent: null,
+                    svgText: convertedSvg,
+                    docWidth: state.docWidth,
+                    docHeight: state.docHeight
+                });
+                renderDocumentTabs();
+                switchDocumentTab(newIdx);
+                importSVGStringToActiveCanvas(convertedSvg, true);
+            }
+            setTimeout(() => zoomFitPage(), 80);
+            toast(`⚡ Arquivo "${file.name}" aberto em nova aba com 100% de precisão vetorial nativa!`, 'ok');
             return;
         }
 
@@ -2017,7 +2056,34 @@ async function handleImportFile(file) {
         }
     } else if (ext === 'svg') {
         const text = await file.text();
-        importSVGStringToActiveCanvas(text, true);
+        const layerGroup = document.getElementById('layerGroupMain');
+        const isCurrentEmpty = (!layerGroup || layerGroup.children.length === 0) && 
+                               (state.pages.length === 1 && !state.pages[0].svgContent && !state.pages[0].svgText);
+        if (isCurrentEmpty) {
+            state.pages[0].name = file.name;
+            state.pages[0].svgText = text;
+            importSVGStringToActiveCanvas(text, true);
+            renderDocumentTabs();
+        } else {
+            if (state.activePageIndex >= 0 && state.pages[state.activePageIndex] && layerGroup) {
+                state.pages[state.activePageIndex].svgContent = layerGroup.innerHTML;
+                state.pages[state.activePageIndex].docWidth = state.docWidth;
+                state.pages[state.activePageIndex].docHeight = state.docHeight;
+            }
+            const newIdx = state.pages.length;
+            state.pages.push({
+                id: Date.now(),
+                name: file.name,
+                svgContent: null,
+                svgText: text,
+                docWidth: state.docWidth,
+                docHeight: state.docHeight
+            });
+            renderDocumentTabs();
+            switchDocumentTab(newIdx);
+            importSVGStringToActiveCanvas(text, true);
+        }
+        setTimeout(() => zoomFitPage(), 80);
     } else if (ext === 'json') {
         const text = await file.text();
         importProjectJSON(text);
@@ -3923,17 +3989,31 @@ function initKeyboardShortcuts() {
 }
 
 function newDocument() {
-    if (confirm('Deseja criar um novo documento e limpar a prancheta atual?')) {
-        const layerGroup = document.getElementById('layerGroupMain');
-        if (layerGroup) layerGroup.innerHTML = '';
-        state.pages = [{ id: 0, name: 'Documento 1', svgContent: null, docWidth: 1122, docHeight: 793 }];
-        state.activePageIndex = 0;
-        deselectAll();
-        renderDocumentTabs();
-        updateLayersTree();
-        saveState('Novo Documento');
-        toast('Novo documento criado!', 'ok');
+    const layerGroup = document.getElementById('layerGroupMain');
+    const isCurrentEmpty = (!layerGroup || layerGroup.children.length === 0) && (state.pages.length === 1 && !state.pages[0].svgContent);
+    if (isCurrentEmpty) {
+        toast('Documento atual já está em branco.', 'info');
+        return;
     }
+    if (state.activePageIndex >= 0 && state.pages[state.activePageIndex] && layerGroup) {
+        state.pages[state.activePageIndex].svgContent = layerGroup.innerHTML;
+        state.pages[state.activePageIndex].docWidth = state.docWidth;
+        state.pages[state.activePageIndex].docHeight = state.docHeight;
+    }
+    const newIdx = state.pages.length;
+    state.pages.push({
+        id: Date.now(),
+        name: `Documento ${newIdx + 1}`,
+        svgContent: '',
+        docWidth: 1122,
+        docHeight: 793
+    });
+    switchDocumentTab(newIdx);
+    state.docWidth = 1122;
+    state.docHeight = 793;
+    applyDocDimensions();
+    setTimeout(() => zoomFitPage(), 50);
+    toast(`Novo documento aberto em nova aba!`, 'ok');
 }
 
 function showShortcutsModal() {
