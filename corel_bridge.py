@@ -220,6 +220,64 @@ def convert_cdr_via_cdr2xhtml(input_cdr_path):
 
         svg_clean = re.sub(r'<path\b[^>]*\bd="([^"]+)"[^>]*style="(fill:\s*none;\s*)"[^>]*>', fix_path_style, svg_clean)
 
+        # 4b. Fix multi-line and vertical stacked text (e.g. LAVANDERIA)
+        def fix_multiline_text(m):
+            full_text = m.group(0)
+            text_attrs = m.group(1)
+            inner_content = m.group(2)
+            tspan_match = re.search(r'<tspan\b([^>]*)>([\s\S]*?)</tspan>', inner_content)
+            if not tspan_match:
+                return full_text
+            tspan_attrs = tspan_match.group(1)
+            raw_body = tspan_match.group(2)
+            lines = [line.strip() for line in re.split(r'[\r\n]+', raw_body) if line.strip()]
+            if len(lines) <= 1:
+                return full_text
+            xm = re.search(r'\bx="([-+]?\d*\.?\d+)"', text_attrs)
+            ym = re.search(r'\by="([-+]?\d*\.?\d+)"', text_attrs)
+            orig_x = float(xm.group(1)) if xm else 0.0
+            orig_y = float(ym.group(1)) if ym else 0.0
+            fsm = re.search(r'font-size="([-+]?\d*\.?\d+)"', tspan_attrs)
+            fs = float(fsm.group(1)) if fsm else 20.0
+            fam_m = re.search(r'font-family="([^"]+)"', tspan_attrs)
+            font_family = fam_m.group(1) if fam_m else 'Arial'
+            fill_m = re.search(r'fill="([^"]+)"', tspan_attrs)
+            fill = fill_m.group(1) if fill_m else '#000000'
+            is_vertical = all(len(l) <= 2 for l in lines)
+            if is_vertical:
+                cx = orig_x + (fs / 2.0)
+                first_y = orig_y - (len(lines) - 1) * (1.128 * fs)
+                step = 1.128 * fs
+                for d in re.findall(r'<path\b[^>]*\bd="([^"]+)"', svg_clean):
+                    p_nums = [float(n) for n in re.findall(r'[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?', d)]
+                    if p_nums and len(p_nums) >= 4:
+                        pxs, pys = p_nums[0::2], p_nums[1::2]
+                        p_min_x, p_max_x = min(pxs), max(pxs)
+                        p_min_y, p_max_y = min(pys), max(pys)
+                        p_w = p_max_x - p_min_x
+                        p_h = p_max_y - p_min_y
+                        if p_h > 2 * p_w and (p_min_x - 100 <= orig_x <= p_max_x + 100) and (p_min_y <= orig_y <= p_max_y + 100):
+                            cx = (p_min_x + p_max_x) / 2.0
+                            first_y = p_min_y + 0.88 * fs
+                            last_y = orig_y
+                            step = (last_y - first_y) / (len(lines) - 1)
+                            break
+                tspans = []
+                for idx, ch in enumerate(lines):
+                    y_pos = first_y + idx * step
+                    tspans.append(f'<tspan x="{cx:.2f}" y="{y_pos:.2f}">{ch}</tspan>')
+                return f'<text text-anchor="middle" font-family="{font_family}, sans-serif" font-weight="bold" font-size="{fs:.2f}" fill="{fill}">\n' + '\n'.join(tspans) + '\n</text>'
+            else:
+                step = 1.2 * fs
+                first_y = orig_y - (len(lines) - 1) * step
+                tspans = []
+                for idx, line in enumerate(lines):
+                    y_pos = first_y + idx * step
+                    tspans.append(f'<tspan x="{orig_x:.2f}" y="{y_pos:.2f}">{line}</tspan>')
+                return f'<text font-family="{font_family}, sans-serif" font-size="{fs:.2f}" fill="{fill}">\n' + '\n'.join(tspans) + '\n</text>'
+
+        svg_clean = re.sub(r'<text\b([^>]*)>([\s\S]*?)</text>', fix_multiline_text, svg_clean)
+
         # 5. Bake shift_x and shift_y directly into element coordinates for top-level editing
         pad = 30.0
         shift_x = -min_x + pad
@@ -359,7 +417,7 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                 "service": "CorelClone High-Fidelity Vector Bridge",
                 "converters": ["cdr2xhtml (native libcdr)", "libreoffice/draw", "pdftocairo"],
                 "cdr2xhtml": cdr_bin,
-                "version": "2026.3"
+                "version": "2026.4"
             }
             self.wfile.write(json.dumps(resp).encode('utf-8'))
             return
