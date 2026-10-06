@@ -369,20 +369,25 @@ def convert_cdr_via_cdr2xhtml(input_cdr_path):
         num_extracted_texts = len(re.findall(r'<text\b', svg_clean))
 
         if num_extracted_images == 0 and num_extracted_texts == 0 and num_extracted_paths <= 2 and thumb is not None:
+            img_rgba = thumb.convert('RGBA')
+            arr = np.array(img_rgba)
+            corners = [(0, 0), (img_rgba.width - 1, 0), (0, img_rgba.height - 1), (img_rgba.width - 1, img_rgba.height - 1)]
+            if all(np.all(arr[y, x, :3] >= 245) for x, y in corners) and ndi is not None:
+                try:
+                    is_white = np.all(arr[:, :, :3] >= 245, axis=2)
+                    labeled, _ = ndi.label(is_white)
+                    corner_labels = set([labeled[y, x] for x, y in corners])
+                    corner_labels.discard(0)
+                    bg_mask = np.isin(labeled, list(corner_labels))
+                    arr[bg_mask, 3] = 0
+                    img_rgba = Image.fromarray(arr)
+                except Exception:
+                    pass
+
             buf = io.BytesIO()
-            thumb.save(buf, format='PNG')
+            img_rgba.save(buf, format='PNG')
             b64_png = base64.b64encode(buf.getvalue()).decode('ascii')
-            d_match = re.search(r'd="([^"]+)"', inner)
-            if d_match:
-                clip_d = d_match.group(1)
-                inner = f"""<defs>
-  <clipPath id="powerclip_container">
-    <path d="{clip_d}" />
-  </clipPath>
-</defs>
-<image xlink:href="data:image/png;base64,{b64_png}" x="{pad:.2f}" y="{pad:.2f}" width="{bbox_w:.2f}" height="{bbox_h:.2f}" clip-path="url(#powerclip_container)" />"""
-            else:
-                inner = f'<image xlink:href="data:image/png;base64,{b64_png}" x="{pad:.2f}" y="{pad:.2f}" width="{bbox_w:.2f}" height="{bbox_h:.2f}" />'
+            inner = f'<image xlink:href="data:image/png;base64,{b64_png}" x="{pad:.2f}" y="{pad:.2f}" width="{bbox_w:.2f}" height="{bbox_h:.2f}" />'
 
         final_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{final_w:.2f}" height="{final_h:.2f}" viewBox="0 0 {final_w:.2f} {final_h:.2f}">
 {inner}
@@ -490,7 +495,7 @@ class CDRBridgeHandler(BaseHTTPRequestHandler):
                 "service": "CorelClone High-Fidelity Vector Bridge",
                 "converters": ["cdr2xhtml (native libcdr)", "libreoffice/draw", "pdftocairo"],
                 "cdr2xhtml": cdr_bin,
-                "version": "2026.7"
+                "version": "2026.8"
             }
             self.wfile.write(json.dumps(resp).encode('utf-8'))
             return
